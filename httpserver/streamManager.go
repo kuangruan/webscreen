@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -118,8 +117,4 @@ func (sm *StreamManager) HandleSDP(c *gin.Context) {
 	// G. 将最终的 SDP Answer 返回给浏览器
 	c.Writer.Header().Set("Content-Type", "application/sdp")
 	fmt.Fprint(c.Writer, peerConnection.LocalDescription().SDP)
-}
-
-func handle_static(c *gin.Context) {
-	http.ServeFile(c.Writer, c.Request, "./public"+c.Request.URL.Path)
 }

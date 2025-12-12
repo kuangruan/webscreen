@@ -15,14 +15,16 @@ type ScrcpyParams struct {
 }
 
 type ScrcpyVideoMeta struct {
-	CodecID [4]byte
-	Width   [4]byte
-	Height  [4]byte
+	CodecID string
+	Width   uint32
+	Height  uint32
 }
 
 type ScrcpyVideoFrameHeader struct {
-	PTS  [8]byte
-	Size [4]byte
+	IsConfig   bool
+	IsKeyFrame bool
+	PTS        uint64
+	Size       uint32
 }
 
 type ScrcpyVideoFrame struct {
@@ -31,5 +33,23 @@ type ScrcpyVideoFrame struct {
 }
 
 type ScrcpyAudioMeta struct {
-	CodecID [4]byte
+	CodecID string
+}
+
+type ScrcpyAudioFrame struct{}
+
+type ScrcpyControlFrame struct{}
+
+type WebRTCVideoFrame struct {
+	Data      []byte
+	Timestamp int64
+}
+
+type WebRTCAudioFrame struct {
+	Data      []byte
+	Timestamp int64
+}
+type WebRTCControlFrame struct {
+	Data      []byte
+	Timestamp int64
 }

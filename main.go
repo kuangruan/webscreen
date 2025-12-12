@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"webcpy/adb"
 	"webcpy/httpserver"
+	"webcpy/scrcpy"
 
 	"github.com/pion/webrtc/v4"
 )
@@ -20,7 +22,7 @@ const (
 
 func main() {
 	var err error
-	// 1. 推送 Server
+	// 推送 Server
 	adbClient := adb.NewClient("")
 	defer adbClient.Stop()
 	err = adbClient.Push(ServerLocalPath, ServerRemotePath)
@@ -33,14 +35,13 @@ func main() {
 		log.Fatalf("设置 Reverse 隧道失败: %v", err)
 	}
 
-	// 3. 本地监听
 	listener, err := net.Listen("tcp", ":"+LocalPort)
 	if err != nil {
 		log.Fatalf("监听端口失败: %v", err)
 	}
 	defer listener.Close()
 
-	// 4. 启动 Android 端 Server
+	// 启动 Android 端 Server
 	adbClient.StartScrcpyServer()
 
 	const StreamID = "android_live_stream"
@@ -62,22 +63,24 @@ func main() {
 	streamManager := &httpserver.StreamManager{}
 	streamManager.UpdateTracks(videoTrack, audioTrack)
 
+	go httpserver.HTTPServer(streamManager, "8081")
+
+	conns := make([]net.Conn, 3)
+	for i := 0; i < 3; i++ {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatalf("Accept 失败: %v", err)
+		}
+		log.Println("Accept Connection", i)
+		conns[i] = conn
+	}
+	dataAdapter := scrcpy.NewDataAdapter(conns)
+	fmt.Printf("Video Codec: %v\t Width: %v\t Height: %v\n", dataAdapter.VideoMeta.CodecID, dataAdapter.VideoMeta.Width, dataAdapter.VideoMeta.Height)
+
 	select {}
-
-	// 初始化 WebRTC
-	// videoTrack, err = webrtc.NewTrackLocalStaticSample(
-	// 	webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264},
-	// 	"video", "pion",
-	// )
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// go startHTTPServer()
-
 	// // 5. 等待连接
 	// log.Println(">>> 等待设备连接...")
-	// conn, err := listener.Accept()
+	//
 	// if err != nil {
 	// 	log.Fatalf("Accept 失败: %v", err)
 	// }
