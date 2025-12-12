@@ -126,6 +126,28 @@ func (da *DataAdapter) ShowDeviceInfo() {
 }
 
 func (da *DataAdapter) StartConvertVideoFrame() {
+	createCopy := func(src []byte) []byte {
+		if len(src) == 0 {
+			return nil
+		}
+		// A. 从池子拿（准备做复印件的纸）
+		dst := da.VideoPayloadPool.Get().([]byte)
+
+		// B. 容量检查
+		// 如果池子里的纸太小（SPS通常很小，这种情况极少发生，但为了健壮性必须写）
+		if cap(dst) < len(src) {
+			// 把太小的还回去
+			da.VideoPayloadPool.Put(dst)
+			// 重新造个大的（这次 GC 无法避免，但仅限初始化阶段，无所谓）
+			dst = make([]byte, len(src))
+			log.Println("resize")
+		}
+
+		// C. 设定长度并拷贝
+		dst = dst[:len(src)]
+		copy(dst, src)
+		return dst
+	}
 	go func() {
 		var startCode = []byte{0x00, 0x00, 0x00, 0x01}
 		// var lastPTS uint64 = 0
@@ -171,24 +193,30 @@ func (da *DataAdapter) StartConvertVideoFrame() {
 					pspInfo.Width, pspInfo.Height, pspInfo.FrameRate, pspInfo.Profile, pspInfo.Level)
 				//
 				sendPTS = frame.Header.PTS
+				SPSCopy := createCopy(cachedSPS)
+				log.Println("copy cache")
 				da.VideoChan <- WebRTCVideoFrame{
-					Data:      cachedSPS,
+					Data:      SPSCopy,
 					Timestamp: int64(sendPTS),
 				}
+				PPSCopy := createCopy(cachedPPS)
 				da.VideoChan <- WebRTCVideoFrame{
-					Data:      cachedPPS,
+					Data:      PPSCopy,
 					Timestamp: int64(sendPTS),
 				}
 				da.VideoPayloadPool.Put(payloadBuf)
 				continue
 			}
 			if frame.Header.IsKeyFrame {
+				SPSCopy := createCopy(cachedSPS)
+				PPSCopy := createCopy(cachedPPS)
+				log.Println("copy cache")
 				da.VideoChan <- WebRTCVideoFrame{
-					Data:      cachedSPS,
+					Data:      SPSCopy,
 					Timestamp: int64(frame.Header.PTS),
 				}
 				da.VideoChan <- WebRTCVideoFrame{
-					Data:      cachedPPS,
+					Data:      PPSCopy,
 					Timestamp: int64(frame.Header.PTS),
 				}
 			}
