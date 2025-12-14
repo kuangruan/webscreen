@@ -28,19 +28,20 @@ type StreamManager struct {
 
 // 创建视频轨和音频轨，并初始化 StreamManager. 需要手动添加dataAdapter
 func NewStreamManager(dataAdapter *scrcpy.DataAdapter) *StreamManager {
-	const StreamID = "android_live_stream"
+	VideoStreamID := "android_live_stream_video"
+	AudioStreamID := "android_live_stream_audio"
 	// 创建视频轨
 	videoTrack, _ := webrtc.NewTrackLocalStaticSample(
 		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264},
 		"video-track-id",
-		StreamID, // <--- 关键点
+		VideoStreamID, // <--- 关键点
 	)
 
 	// 创建音频轨
 	audioTrack, _ := webrtc.NewTrackLocalStaticSample(
 		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, // 假设音频是 Opus
 		"audio-track-id",
-		StreamID, // <--- 必须和视频的一样！
+		AudioStreamID, // <--- 使用不同的 StreamID 以取消强制同步
 	)
 	return &StreamManager{
 		VideoTrack:  videoTrack,

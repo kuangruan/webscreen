@@ -42,6 +42,18 @@ func ScrcpyTypeFromWSMsgType(t byte) byte {
 	}
 }
 
+func (sm *StreamManager) createScrcpyKeyEvent(wsMsg []byte) (scrcpy.KeyEvent, error) {
+	if len(wsMsg) != 4 {
+		return scrcpy.KeyEvent{}, fmt.Errorf("invalid key event message length: %d", len(wsMsg))
+	}
+	e := scrcpy.KeyEvent{
+		Type:    scrcpy.TYPE_INJECT_KEYCODE,
+		Action:  wsMsg[1],
+		KeyCode: uint32(binary.BigEndian.Uint16(wsMsg[2:4])),
+	}
+	return e, nil
+}
+
 func (sm *StreamManager) createScrcpyTouchEvent(wsMsg []byte) (scrcpy.TouchEvent, error) {
 	if len(wsMsg) != 10 {
 		return scrcpy.TouchEvent{}, fmt.Errorf("invalid touch event message length: %d", len(wsMsg))

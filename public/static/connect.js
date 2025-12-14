@@ -4,12 +4,20 @@ async function start() {
 
     // 1. 监听远端流
     pc.ontrack = function (event) {
-        const el = document.getElementById('remoteVideo');
-        el.srcObject = event.streams[0];
+        if (event.track.kind === 'video') {
+            const el = document.getElementById('remoteVideo');
+            el.srcObject = event.streams[0];
 
-        // 监听视频尺寸变化
-        el.addEventListener('loadedmetadata', triggerCheck);
-        el.addEventListener('resize', triggerCheck);
+            // 监听视频尺寸变化
+            el.addEventListener('loadedmetadata', triggerCheck);
+            el.addEventListener('resize', triggerCheck);
+        } else if (event.track.kind === 'audio') {
+            // 音频单独用一个 audio 标签播放，彻底解耦同步
+            const audioEl = document.createElement('audio');
+            audioEl.srcObject = event.streams[0];
+            audioEl.autoplay = true;
+            document.body.appendChild(audioEl);
+        }
     };
 
     // 2. 添加一个仅接收的 Transceiver (重要)
@@ -44,6 +52,22 @@ async function start() {
         type: 'answer',
         sdp: answerSdp
     }));
+    pc.getReceivers().forEach(receiver => {
+        if (receiver.track.kind === 'video') {
+            if (receiver.playoutDelayHint !== undefined) {
+                receiver.playoutDelayHint = 0;
+            }
+            if (receiver.jitterBufferTarget !== undefined) {
+                receiver.jitterBufferTarget = 0;
+            }
+            console.log('✓ 已启用 WebRTC 低延迟模式 (playoutDelayHint=0, jitterBufferTarget=0)');
+        }
+    });
+    setInterval(() => force_sync(pc), 2000);
+    
+    // 重置按钮状态
+    p = createTouchPacket(TOUCH_ACTION_UP, 0, 0, 0);
+    sendWSMessage(p);
 }
 
 function sendWSMessage(message) {

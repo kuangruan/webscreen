@@ -15,7 +15,7 @@ import (
 
 type ADBClient struct {
 	Address      string // 设备的IP地址或序列号
-	ScrcpyParams ScrcpyParams
+	ScrcpyParams ScrcpyOptions
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -24,11 +24,11 @@ type ADBClient struct {
 // NewADBClient 创建一个新的 ADB 客户端结构体.
 // 如果 address 为空字符串，则表示使用默认设备.
 func NewADBClient(address string) *ADBClient {
-	defaultScrcpyParams := ScrcpyParams{
+	defaultScrcpyParams := ScrcpyOptions{
 		Version:      "3.3.3",
 		SCID:         GenerateSCID(),
 		MaxFPS:       "60",
-		VideoBitRate: "16000000",
+		VideoBitRate: "8000000",
 		Control:      "true",
 		Audio:        "true",
 		VideoCodec:   "h264",
@@ -111,7 +111,7 @@ func GenerateSCID() string {
 }
 
 // 将ScrcpyParams转为 key=value 格式的参数列表
-func ScrcpyParamsToArgs(p ScrcpyParams) []string {
+func ScrcpyParamsToArgs(p ScrcpyOptions) []string {
 	args := []string{
 		// fmt.Sprintf("max_size=%s", p.MaxSize),
 		fmt.Sprintf("max_fps=%s", p.MaxFPS),
@@ -130,7 +130,7 @@ func ScrcpyParamsToArgs(p ScrcpyParams) []string {
 	return args
 }
 
-func GetScrcpyCommand(params ScrcpyParams) string {
+func GetScrcpyCommand(params ScrcpyOptions) string {
 	base := fmt.Sprintf("CLASSPATH=%s app_process / com.genymobile.scrcpy.Server %s ",
 		params.CLASSPATH, params.Version)
 	args := ScrcpyParamsToArgs(params)
