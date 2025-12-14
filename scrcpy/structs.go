@@ -56,6 +56,7 @@ type SPSInfo struct {
 type WebRTCFrame struct {
 	Data      []byte
 	Timestamp int64
+	IsConfig  bool
 }
 
 // type WebRTCAudioFrame struct {

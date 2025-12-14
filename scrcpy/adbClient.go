@@ -31,7 +31,7 @@ func NewADBClient(address string) *ADBClient {
 		VideoBitRate: "20000000",
 		Control:      "true",
 		Audio:        "true",
-		VideoCodec:   "h264",
+		VideoCodec:   "h265",
 		//VideoCodecOptions: "i-frame-interval=1",
 		LogLevel: "debug",
 	}

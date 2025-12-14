@@ -106,13 +106,15 @@ func (da *DataAdapter) SendScrollEvent(e ScrollEvent) {
 }
 
 func (da *DataAdapter) RequestKeyFrame() error {
+
+	// return nil
 	if da.controlConn == nil {
 		return nil
 	}
 	// da.keyFrameRequestMutex.Lock()
 	// defer da.keyFrameRequestMutex.Unlock()
 	log.Printf("Last Request KeyFrame time: %v Last IDR time: %v", da.lastIDRRequestTime, da.LastIDRTime)
-	if time.Since(da.LastIDRTime) < 5*time.Second {
+	if time.Since(da.LastIDRTime) < 5*time.Second || time.Since(da.lastIDRRequestTime) < 5*time.Second {
 		log.Println("⏳ KeyFrame request too frequent, use cached")
 		da.keyFrameMutex.RLock()
 

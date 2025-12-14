@@ -12,9 +12,9 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 		var startCode = []byte{0x00, 0x00, 0x00, 0x01}
 
 		if payload[4]&0x1F == 7 {
-			SPSData := []byte{0x00, 0x00, 0x00, 0x01}
-			PPSData := []byte{0x00, 0x00, 0x00, 0x01}
-			IDRData := []byte{0x00, 0x00, 0x00, 0x01}
+			SPSData := []byte{}
+			PPSData := []byte{}
+			IDRData := []byte{}
 			parts := bytes.Split(payload, startCode)
 			for _, nal := range parts {
 				if len(nal) == 0 {
@@ -46,14 +46,16 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 				}
 			}
 			// Yield Packets
-			if !yield(WebRTCFrame{Data: createCopy(SPSData, &da.PayloadPoolLarge), Timestamp: int64(header.PTS)}) {
+			if !yield(WebRTCFrame{Data: createCopy(SPSData, &da.PayloadPoolLarge), Timestamp: int64(header.PTS), IsConfig: true}) {
 				return
 			}
-			if !yield(WebRTCFrame{Data: createCopy(PPSData, &da.PayloadPoolLarge), Timestamp: int64(header.PTS)}) {
+			if !yield(WebRTCFrame{Data: createCopy(PPSData, &da.PayloadPoolLarge), Timestamp: int64(header.PTS), IsConfig: true}) {
 				return
 			}
-			if !yield(WebRTCFrame{Data: createCopy(IDRData, &da.PayloadPoolLarge), Timestamp: int64(header.PTS)}) {
-				return
+			if len(IDRData) != 0 {
+				if !yield(WebRTCFrame{Data: createCopy(IDRData, &da.PayloadPoolLarge), Timestamp: int64(header.PTS), IsConfig: false}) {
+					return
+				}
 			}
 			log.Println("Sent H264 keyframe NALUs: SPS, PPS, IDR")
 			return // 已经处理完所有NALU，返回
@@ -67,20 +69,21 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 			da.keyFrameMutex.RUnlock()
 
 			if da.LastSPS != nil {
-				if !yield(WebRTCFrame{Data: createCopy(da.LastSPS, &da.PayloadPoolLarge), Timestamp: int64(header.PTS)}) {
+				if !yield(WebRTCFrame{Data: createCopy(da.LastSPS, &da.PayloadPoolLarge), Timestamp: int64(header.PTS), IsConfig: true}) {
 					return
 				}
 			}
 			if da.LastPPS != nil {
-				if !yield(WebRTCFrame{Data: createCopy(da.LastPPS, &da.PayloadPoolLarge), Timestamp: int64(header.PTS)}) {
+				if !yield(WebRTCFrame{Data: createCopy(da.LastPPS, &da.PayloadPoolLarge), Timestamp: int64(header.PTS), IsConfig: true}) {
 					return
 				}
 			}
 		}
 
 		if !yield(WebRTCFrame{
-			Data:      payload,
+			Data:      payload[4:],
 			Timestamp: int64(header.PTS),
+			IsConfig:  false,
 		}) {
 			return
 		}

@@ -101,6 +101,9 @@ func (sm *StreamManager) WriteVideoSample(webrtcFrame *scrcpy.WebRTCFrame) error
 		duration = time.Millisecond * 16
 	}
 
+	if webrtcFrame.IsConfig {
+		duration = 0
+	}
 	sample := media.Sample{
 		Data:      webrtcFrame.Data,
 		Duration:  duration,
