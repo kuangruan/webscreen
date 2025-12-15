@@ -99,49 +99,25 @@ func (sm *StreamManager) WriteVideoSample(webrtcFrame *scrcpy.WebRTCFrame) error
 		duration = time.Millisecond * 16
 	}
 
-	var pool sync.Pool
-	// var dataToWrite []byte
-	// log.Printf("length of payload: %v", cap(webrtcFrame.Data))
-	if webrtcFrame.NotConfig {
-		pool = sm.DataAdapter.PayloadPoolLarge
-	} else {
+	// Config 帧 (SPS/PPS) 不需要持续时间
+	if !webrtcFrame.NotConfig {
 		duration = 0
-		pool = sm.DataAdapter.PayloadPoolSmall
 	}
-	// if bytes.HasPrefix(webrtcFrame.Data, []byte{0, 0, 0, 1}) {
-	// 	// 去掉 4 字节起始码
-	// 	dataToWrite = webrtcFrame.Data[4:]
-	// 	log.Fatalln("Removed 4-byte start code from video frame, which is unexpected.")
-	// } else if bytes.HasPrefix(webrtcFrame.Data, []byte{0, 0, 1}) {
-	// 	// 去掉 3 字节起始码
-	// 	dataToWrite = webrtcFrame.Data[3:]
-	// 	log.Fatalln("Removed 3-byte start code from video frame, which is unexpected.")
-	// } else {
-	// 	dataToWrite = webrtcFrame.Data
-	// }
-	// dataToWrite = append([]byte{0, 0, 0, 1}, dataToWrite...)
-	// dataToWrite = webrtcFrame.Data
+
 	sample := media.Sample{
 		Data:      webrtcFrame.Data,
 		Duration:  duration,
 		Timestamp: time.UnixMicro(webrtcFrame.Timestamp),
 	}
-	// sm.RLock()
-	// track := sm.VideoTrack
-	// sm.RUnlock()
-	// log.Printf("Writing video sample, size: %d, duration: %v", len(sample.Data), sample.Duration)
+
 	err := sm.VideoTrack.WriteSample(sample)
 	if err != nil {
 		return fmt.Errorf("写入视频样本失败: %v", err)
 	}
-	pool.Put(webrtcFrame.Data) // ⚠️ 禁止回收！Pion 的 NACK/RTX 机制会持有切片引用，回收会导致重传数据损坏（绿屏/花屏）
 	return nil
 }
 
 func (sm *StreamManager) WriteAudioSample(webrtcFrame *scrcpy.WebRTCFrame) error {
-	//sm.Lock()
-	//defer sm.Unlock()
-	//todo
 	if sm.AudioTrack == nil {
 		log.Println("Audio track is nil")
 		return fmt.Errorf("音频轨道尚未准备好")
@@ -152,14 +128,11 @@ func (sm *StreamManager) WriteAudioSample(webrtcFrame *scrcpy.WebRTCFrame) error
 		Duration:  time.Millisecond * 20, // 假设每个 Opus 帧是 20ms
 		Timestamp: time.UnixMicro(webrtcFrame.Timestamp),
 	}
-	// sm.RLock()
-	// track := sm.AudioTrack
-	// sm.RUnlock()
+
 	err := sm.AudioTrack.WriteSample(sample)
 	if err != nil {
 		return fmt.Errorf("写入音频样本失败: %v", err)
 	}
-	sm.DataAdapter.PayloadPoolSmall.Put(webrtcFrame.Data) // 同上，防止音频重传数据损坏
 	return nil
 }
 

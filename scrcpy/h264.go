@@ -3,7 +3,6 @@ package scrcpy
 import (
 	"bytes"
 	"iter"
-	"sync"
 	"time"
 )
 
@@ -49,34 +48,27 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 
 			// --- 以下是处理逻辑 ---
 			nalType := nal[0] & 0x1F
-			var pool *sync.Pool
 			isConfig := false
 
 			switch nalType {
 			case 7: // SPS
 				da.updateVideoMetaFromSPS(nal, "h264")
 				da.keyFrameMutex.Lock()
-				da.LastSPS = nal
+				da.LastSPS = createCopy(nal) // 必须拷贝，因为 nal 引用的是 LinearBuffer
 				da.keyFrameMutex.Unlock()
 				isConfig = true
 			case 8: // PPS
 				da.keyFrameMutex.Lock()
-				da.LastPPS = nal
+				da.LastPPS = createCopy(nal) // 必须拷贝
 				da.keyFrameMutex.Unlock()
 				isConfig = true
 			case 5: // IDR
 				da.keyFrameMutex.Lock()
-				da.LastIDR = nal
+				da.LastIDR = createCopy(nal) // 必须拷贝
 				da.LastIDRTime = time.Now()
 				da.keyFrameMutex.Unlock()
 			case 6: // SEI
 				isConfig = true
-			}
-
-			if isConfig {
-				pool = &da.PayloadPoolSmall
-			} else {
-				pool = &da.PayloadPoolLarge
 			}
 
 			// 如果是 IDR 帧，先发送缓存的 SPS/PPS
@@ -86,20 +78,20 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 				da.keyFrameMutex.RUnlock()
 
 				if sps != nil {
-					if !yield(WebRTCFrame{Data: createCopy(sps, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
+					if !yield(WebRTCFrame{Data: createCopy(sps), Timestamp: int64(header.PTS)}) {
 						return
 					}
 				}
 				if pps != nil {
-					if !yield(WebRTCFrame{Data: createCopy(pps, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
+					if !yield(WebRTCFrame{Data: createCopy(pps), Timestamp: int64(header.PTS)}) {
 						return
 					}
 				}
 			}
 
-			// 发送当前 NALU (此时才进行内存拷贝)
+			// 发送当前 NALU (零拷贝，直接引用 LinearBuffer)
 			if !yield(WebRTCFrame{
-				Data:      createCopy(nal, pool),
+				Data:      nal,
 				Timestamp: int64(header.PTS),
 				NotConfig: !isConfig,
 			}) {

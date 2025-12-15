@@ -3,7 +3,6 @@ package scrcpy
 import (
 	"bytes"
 	"iter"
-	"sync"
 	"time"
 )
 
@@ -22,7 +21,6 @@ func (da *DataAdapter) GenerateWebRTCFrameH264_v2(header ScrcpyFrameHeader, payl
 			nalType := nal[0] & 0x1F
 			// log.Printf("Debug H264_v2: Part %d, Type: %d, Size: %d", i, nalType, len(nal))
 
-			var pool *sync.Pool
 			isConfig := false
 
 			switch nalType {
@@ -46,12 +44,6 @@ func (da *DataAdapter) GenerateWebRTCFrameH264_v2(header ScrcpyFrameHeader, payl
 				isConfig = true
 			}
 
-			if isConfig {
-				pool = &da.PayloadPoolSmall
-			} else {
-				pool = &da.PayloadPoolLarge
-			}
-
 			// 如果是 IDR 帧，先发送缓存的 SPS/PPS
 			if nalType == 5 {
 				da.keyFrameMutex.RLock()
@@ -61,12 +53,12 @@ func (da *DataAdapter) GenerateWebRTCFrameH264_v2(header ScrcpyFrameHeader, payl
 				if sps != nil {
 					// 直接发送 Raw NALU (不带起始码)
 					// streamManager 会检查前4字节，如果不是 00000001，就会直接发送数据，这正是我们想要的
-					if !yield(WebRTCFrame{Data: createCopy(sps, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
+					if !yield(WebRTCFrame{Data: sps, Timestamp: int64(header.PTS)}) {
 						return
 					}
 				}
 				if pps != nil {
-					if !yield(WebRTCFrame{Data: createCopy(pps, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
+					if !yield(WebRTCFrame{Data: pps, Timestamp: int64(header.PTS)}) {
 						return
 					}
 				}
@@ -74,7 +66,7 @@ func (da *DataAdapter) GenerateWebRTCFrameH264_v2(header ScrcpyFrameHeader, payl
 
 			// 发送当前 NALU (Raw NALU)
 			if !yield(WebRTCFrame{
-				Data:      createCopy(nal, pool),
+				Data:      nal,
 				Timestamp: int64(header.PTS),
 				NotConfig: !isConfig,
 			}) {

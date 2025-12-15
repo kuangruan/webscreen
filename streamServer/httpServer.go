@@ -128,8 +128,8 @@ func (sm *StreamManager) HandleSDP(c *gin.Context) {
 				MimeType:     webrtc.MimeTypeH265,
 				ClockRate:    90000,
 				Channels:     0,
-				SDPFmtpLine:  "",                                                                        // H.265 通常不需要复杂的 fmtp，或者可以留空让 Pion 处理
-				RTCPFeedback: []webrtc.RTCPFeedback{{"goog-remb", ""}, {"ccm", "fir"}, {"nack", "pli"}}, // 禁用 {"nack", ""} 以关闭重传
+				SDPFmtpLine:  "",                                                                                      // H.265 通常不需要复杂的 fmtp，或者可以留空让 Pion 处理
+				RTCPFeedback: []webrtc.RTCPFeedback{{"goog-remb", ""}, {"ccm", "fir"}, {"nack", ""}, {"nack", "pli"}}, // 禁用 {"nack", ""} 以关闭重传
 			},
 			PayloadType: 104, // 使用 104，避开 Offer 中的 49/51 和 H.264 的 102
 		}, webrtc.RTPCodecTypeVideo); err != nil {

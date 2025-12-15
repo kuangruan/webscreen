@@ -10,21 +10,16 @@ import (
 	"time"
 )
 
-// type StreamChan struct {
-// 	VideoChan        chan WebRTCVideoFrame
-// 	AudioChan        chan WebRTCAudioFrame
-// 	ControlChan      chan WebRTCControlFrame
-// 	PayloadPoolLarge sync.Pool
-// }
-
 type DataAdapter struct {
 	// VideoChanMutex   sync.RWMutex
 	// AudioChanMutex   sync.RWMutex
-	VideoChan        chan WebRTCFrame
-	AudioChan        chan WebRTCFrame
-	ControlChan      chan WebRTCControlFrame
-	PayloadPoolLarge sync.Pool
-	PayloadPoolSmall sync.Pool
+	VideoChan   chan WebRTCFrame
+	AudioChan   chan WebRTCFrame
+	ControlChan chan WebRTCControlFrame
+
+	// LinearBuffer 管理器
+	videoBuffer *LinearBuffer
+	audioBuffer *LinearBuffer
 
 	DeviceName string
 	VideoMeta  ScrcpyVideoMeta
@@ -51,6 +46,33 @@ type DataAdapter struct {
 	// LastPFrames   [][]byte
 }
 
+// LinearBuffer 管理器
+type LinearBuffer struct {
+	buf    []byte
+	offset int
+	size   int
+}
+
+func NewLinearBuffer(size int) *LinearBuffer {
+	if size == 0 {
+		size = 8 * 1024 * 1024 // 默认 8MB
+	}
+	return &LinearBuffer{
+		buf:  make([]byte, size),
+		size: size,
+	}
+}
+
+// Get 获取一段空闲内存用于写入。如果空间不足，返回 nil
+func (lb *LinearBuffer) Get(length int) []byte {
+	if lb.offset+length > lb.size {
+		return nil
+	}
+	start := lb.offset
+	lb.offset += length
+	return lb.buf[start:lb.offset]
+}
+
 // 一个DataAdapter对应一个scrcpy实例，通过本地端口建立三个连接：视频、音频、控制
 func NewDataAdapter(config map[string]string) (*DataAdapter, error) {
 	var err error
@@ -62,18 +84,11 @@ func NewDataAdapter(config map[string]string) (*DataAdapter, error) {
 		VideoChan:   make(chan WebRTCFrame, 10),
 		AudioChan:   make(chan WebRTCFrame, 10),
 		ControlChan: make(chan WebRTCControlFrame, 10),
-		PayloadPoolLarge: sync.Pool{
-			New: func() interface{} {
-				// 预分配 512KB (根据你的 码率调整)
-				return make([]byte, 512*1024)
-			},
-		},
-		PayloadPoolSmall: sync.Pool{
-			New: func() interface{} {
-				// 1KB 足够放下大多数 Opus 帧
-				return make([]byte, 1024)
-			},
-		},
+
+		// 4MB 足够存放几秒的高清视频数据
+		// 当这 4MB 用完后，我们会分配新的，旧的由 GC 自动回收
+		videoBuffer: NewLinearBuffer(0),
+		audioBuffer: NewLinearBuffer(1 * 1024 * 1024), // 1MB 音频缓冲区
 	}
 	err = da.adbClient.Push(config["server_local_path"], config["server_remote_path"])
 	if err != nil {
@@ -167,22 +182,26 @@ func (da *DataAdapter) StartConvertVideoFrame() {
 				return
 			}
 			// showFrameHeaderInfo(frame.Header)
-			payloadBuf := da.PayloadPoolLarge.Get().([]byte)
-			// log.Printf("payload size: %v,PayloadPoolLarge capacity: %v", frame.Header.Size, cap(payloadBuf))
-			if cap(payloadBuf) < int(frame.Header.Size) {
-				log.Printf("resize video payload buf, current cap: %v payloadbuf: %v", cap(payloadBuf), cap(payloadBuf))
-				// da.PayloadPoolLarge.Put(payloadBuf) // 不要回收过小的 buffer，直接丢弃让 GC 回收
-				newSize := int(frame.Header.Size) + 1024
-				if newSize < 512*1024 {
-					newSize = 512 * 1024
+			frameSize := int(frame.Header.Size)
+
+			// 2. 从 LinearBuffer 获取内存
+			payloadBuf := da.videoBuffer.Get(frameSize)
+			if payloadBuf == nil {
+				// 当前 Buffer 满了，分配一个新的 (旧的会被 GC，只要 WebRTC 发送完)
+				// log.Println("Video LinearBuffer full, allocating new chunk")
+				da.videoBuffer = NewLinearBuffer(0)
+				payloadBuf = da.videoBuffer.Get(frameSize)
+				// 极端情况：单帧超过 4MB (几乎不可能)，直接分配独立内存
+				if payloadBuf == nil {
+					payloadBuf = make([]byte, frameSize)
 				}
-				payloadBuf = make([]byte, newSize)
 			}
-			if _, err := io.ReadFull(da.videoConn, payloadBuf[:frame.Header.Size]); err != nil {
+
+			if _, err := io.ReadFull(da.videoConn, payloadBuf); err != nil {
 				log.Println("Failed to read video frame payload:", err)
 				return
 			}
-			frameData := payloadBuf[:frame.Header.Size]
+			frameData := payloadBuf
 			// if da.VideoMeta.CodecID == "h264" {
 			// 	niltype := frameData[4] & 0x1F
 			// 	log.Printf("(h264) NALU Type of first NALU in frame: %d; total size: %d", niltype, len(frameData))
@@ -193,7 +212,7 @@ func (da *DataAdapter) StartConvertVideoFrame() {
 
 			var iter func(func(WebRTCFrame) bool)
 			if isH265 {
-				iter = da.GenerateWebRTCFrameH265_debug(frame.Header, frameData)
+				iter = da.GenerateWebRTCFrameH265(frame.Header, frameData)
 			} else {
 				iter = da.GenerateWebRTCFrameH264(frame.Header, frameData)
 			}
@@ -221,36 +240,27 @@ func (da *DataAdapter) StartConvertAudioFrame() {
 				return
 			}
 			// log.Printf("Audio Frame Timestamp: %v, Size: %v isConfig: %v\n", frame.Header.PTS, frame.Header.Size, frame.Header.IsConfig)
-			payloadBuf := da.PayloadPoolSmall.Get().([]byte)
-			if cap(payloadBuf) < int(frame.Header.Size) {
-				log.Println("current buf cap:", cap(payloadBuf))
-				if cap(payloadBuf) >= 1024 {
-					da.PayloadPoolSmall.Put(payloadBuf)
+			frameSize := int(frame.Header.Size)
+			payloadBuf := da.audioBuffer.Get(frameSize)
+			if payloadBuf == nil {
+				// log.Println("Audio LinearBuffer full, allocating new chunk")
+				da.audioBuffer = NewLinearBuffer(1 * 1024 * 1024)
+				payloadBuf = da.audioBuffer.Get(frameSize)
+				if payloadBuf == nil {
+					payloadBuf = make([]byte, frameSize)
 				}
-				payloadBuf = make([]byte, frame.Header.Size+1024)
-				log.Println("Resized payload buffer for audio frame")
-				log.Println("size:  ", frame.Header.Size)
 			}
+
 			// read frame payload
-			n, _ := io.ReadFull(da.audioConn, payloadBuf[:frame.Header.Size])
-			frameData := payloadBuf[:frame.Header.Size]
+			n, _ := io.ReadFull(da.audioConn, payloadBuf)
+			frameData := payloadBuf
 
 			if frame.Header.IsConfig {
 				log.Println("Audio Config Frame Received")
 
 				totalLen := 7 + 8 + int(n)
-				configBuf := da.PayloadPoolSmall.Get().([]byte)
-				if cap(configBuf) < totalLen {
-					if cap(configBuf) >= 1024 {
-						da.PayloadPoolSmall.Put(configBuf)
-					}
-					configBuf = make([]byte, 1024)
-					if cap(configBuf) < totalLen {
-						configBuf = make([]byte, totalLen+512)
-					}
-					log.Println("Resized config buffer for audio config frame")
-				}
-				configBuf = configBuf[:totalLen]
+				configBuf := make([]byte, totalLen) // Config 帧很少，直接分配
+
 				copy(configBuf[0:7], []byte("AOPUSHC"))                   // Magic
 				binary.LittleEndian.PutUint64(configBuf[7:15], uint64(n)) // Length
 				copy(configBuf[15:], frameData)
@@ -258,11 +268,10 @@ func (da *DataAdapter) StartConvertAudioFrame() {
 					Data:      configBuf,
 					Timestamp: int64(frame.Header.PTS),
 				}
-				da.PayloadPoolSmall.Put(payloadBuf)
 				continue
 			}
 
-			// 这里的 Data 引用了 pool 中的内存，消费者用完必须 Put 回去
+			// 这里的 Data 引用了 LinearBuffer 中的内存，零拷贝
 			webRTCFrame := WebRTCFrame{
 				Data:      frameData,
 				Timestamp: int64(frame.Header.PTS),
@@ -341,7 +350,7 @@ func (da *DataAdapter) readVideoMeta(conn net.Conn) error {
 
 func (da *DataAdapter) updateVideoMetaFromSPS(sps []byte, codec string) {
 	if da.LastSPS != nil && bytes.Equal(da.LastSPS, sps) {
-		log.Println("SPS unchanged, no need to update video meta")
+		// log.Println("SPS unchanged, no need to update video meta")
 		return
 	}
 	var spsInfo SPSInfo
@@ -398,22 +407,12 @@ func showFrameHeaderInfo(header ScrcpyFrameHeader) {
 		header.PTS, header.Size, header.IsConfig, header.IsKeyFrame)
 }
 
-func createCopy(src []byte, pool *sync.Pool) []byte {
+func createCopy(src []byte) []byte {
 	if len(src) == 0 {
 		log.Println("createCopy called with empty src")
 		return nil
 	}
-	dst := pool.Get().([]byte)
-	// log.Printf("current pool cap: %d, src size: %d", cap(dst), len(src))
-	if cap(dst) < len(src) {
-		log.Printf("resize pool buffer, current cap:%v < src size:%v", cap(dst), len(src))
-		if len(src) <= 1024 {
-			log.Fatalln("!!!!!!!")
-		}
-		// pool.Put(dst)
-		dst = make([]byte, len(src)+1024)
-	}
+	dst := make([]byte, len(src))
 	copy(dst, src)
-	dst = dst[:len(src)]
 	return dst
 }

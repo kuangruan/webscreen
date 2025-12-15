@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"iter"
 	"log"
-	"sync"
 	"time"
 )
 
@@ -25,39 +24,32 @@ func (da *DataAdapter) GenerateWebRTCFrameH265_debug(header ScrcpyFrameHeader, p
 			nalType := (nal[0] >> 1) & 0x3F
 			log.Printf("Debug H265: Part %d, Type: %d, Size: %d", i, nalType, len(nal))
 
-			var pool *sync.Pool
 			isConfig := false
 
 			switch nalType {
 			case 32: // VPS
 				da.keyFrameMutex.Lock()
-				da.LastVPS = nal
+				da.LastVPS = createCopy(nal)
 				da.keyFrameMutex.Unlock()
 				isConfig = true
 			case 33: // SPS
 				// da.updateVideoMetaFromSPS(nal, "h265") // H265 SPS 解析比较复杂，暂时注释
 				da.keyFrameMutex.Lock()
-				da.LastSPS = nal
+				da.LastSPS = createCopy(nal)
 				da.keyFrameMutex.Unlock()
 				isConfig = true
 			case 34: // PPS
 				da.keyFrameMutex.Lock()
-				da.LastPPS = nal
+				da.LastPPS = createCopy(nal)
 				da.keyFrameMutex.Unlock()
 				isConfig = true
 			// case 39, 40: // SEI
 			// 	isConfig = true
 			case 19, 20, 21: // IDR
 				da.keyFrameMutex.Lock()
-				da.LastIDR = nal
+				da.LastIDR = createCopy(nal)
 				da.LastIDRTime = time.Now()
 				da.keyFrameMutex.Unlock()
-			}
-
-			if isConfig {
-				pool = &da.PayloadPoolSmall
-			} else {
-				pool = &da.PayloadPoolLarge
 			}
 
 			// 如果是 IDR 帧，先发送缓存的 VPS/SPS/PPS
@@ -67,17 +59,17 @@ func (da *DataAdapter) GenerateWebRTCFrameH265_debug(header ScrcpyFrameHeader, p
 				da.keyFrameMutex.RUnlock()
 
 				if vps != nil {
-					if !yield(WebRTCFrame{Data: createCopy(vps, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
+					if !yield(WebRTCFrame{Data: createCopy(vps), Timestamp: int64(header.PTS)}) {
 						return
 					}
 				}
 				if sps != nil {
-					if !yield(WebRTCFrame{Data: createCopy(sps, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
+					if !yield(WebRTCFrame{Data: createCopy(sps), Timestamp: int64(header.PTS)}) {
 						return
 					}
 				}
 				if pps != nil {
-					if !yield(WebRTCFrame{Data: createCopy(pps, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
+					if !yield(WebRTCFrame{Data: createCopy(pps), Timestamp: int64(header.PTS)}) {
 						return
 					}
 				}
@@ -85,7 +77,7 @@ func (da *DataAdapter) GenerateWebRTCFrameH265_debug(header ScrcpyFrameHeader, p
 
 			// 发送当前 NALU (Raw NALU)
 			if !yield(WebRTCFrame{
-				Data:      createCopy(nal, pool),
+				Data:      nal,
 				Timestamp: int64(header.PTS),
 				NotConfig: !isConfig,
 			}) {
