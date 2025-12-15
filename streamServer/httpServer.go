@@ -28,6 +28,7 @@ func HTTPServer(sm *StreamManager, port string) {
 	r.GET("/ws", sm.HandleWebSocket)
 
 	// 启动服务器
+	gin.SetMode(gin.ReleaseMode)
 	err := r.Run(":" + port)
 	if err != nil {
 		panic("启动 HTTP 服务器失败: " + err.Error())

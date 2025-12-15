@@ -93,7 +93,7 @@ func (da *DataAdapter) GenerateWebRTCFrameH264v1(header ScrcpyFrameHeader, paylo
 				currentNalType := nalUnit[4] & 0x1F
 				switch currentNalType {
 				case 7: // SPS
-					da.updateVideoMetaFromSPS(nalUnit[4:])
+					da.updateVideoMetaFromSPS(nalUnit[4:], "h264")
 					da.keyFrameMutex.Lock()
 					// SPS 很小，拷贝一份缓存
 					da.LastSPS = createCopy(nalUnit, &da.PayloadPoolSmall)

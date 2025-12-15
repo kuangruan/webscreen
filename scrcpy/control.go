@@ -114,7 +114,7 @@ func (da *DataAdapter) RequestKeyFrame() error {
 	// da.keyFrameRequestMutex.Lock()
 	// defer da.keyFrameRequestMutex.Unlock()
 	log.Printf("Last Request KeyFrame time: %v Last IDR time: %v", da.lastIDRRequestTime, da.LastIDRTime)
-	if time.Since(da.LastIDRTime) < 5*time.Second || time.Since(da.lastIDRRequestTime) < 5*time.Second {
+	if time.Since(da.LastIDRTime) < 1*time.Second || time.Since(da.lastIDRRequestTime) < 1*time.Second {
 		log.Println("⏳ KeyFrame request too frequent, use cached")
 		da.keyFrameMutex.RLock()
 
@@ -130,13 +130,13 @@ func (da *DataAdapter) RequestKeyFrame() error {
 			return nil
 		}
 
-		var vpsCopy, spsCopy, ppsCopy, idrCopy []byte
+		var vpsCopy, spsCopy, ppsCopy []byte
 		if isH265 {
 			vpsCopy = createCopy(da.LastVPS, &da.PayloadPoolSmall)
 		}
 		spsCopy = createCopy(da.LastSPS, &da.PayloadPoolSmall)
 		ppsCopy = createCopy(da.LastPPS, &da.PayloadPoolSmall)
-		idrCopy = createCopy(da.LastIDR, &da.PayloadPoolLarge)
+		// idrCopy = createCopy(da.LastIDR, &da.PayloadPoolLarge)
 		// Check freshness of IDR
 		// idrFresh := time.Since(da.LastIDRTime) < 500*time.Millisecond
 
@@ -151,17 +151,9 @@ func (da *DataAdapter) RequestKeyFrame() error {
 			da.VideoChan <- WebRTCFrame{Data: ppsCopy, Timestamp: timestamp}
 
 			// 为了保证流畅性，即使 IDR 不新鲜也发送
-			// if idrFresh {
-			da.VideoChan <- WebRTCFrame{Data: idrCopy, Timestamp: timestamp, NotConfig: true}
-			log.Println("✅ Sent cached keyframe data")
-			// } else {
-			// 	log.Println("✅ Sent cached keyframe data (Config only, IDR too old)")
-			// 	// If we don't send IDR, we should probably put the buffer back?
-			// 	// But createCopyFromPool allocates from pool.
-			// 	// The receiver of VideoChan is responsible for putting it back.
-			// 	// If we don't send it, we leak it (or rather, we hold it until GC if we didn't use pool, but we used pool).
-			// 	// Wait, if we don't send it to VideoChan, we MUST put it back manually.
-			// 	da.PayloadPoolLarge.Put(idrCopy)
+			// if idrCopy != nil {
+			// 	da.VideoChan <- WebRTCFrame{Data: idrCopy, Timestamp: timestamp, NotConfig: true}
+			// 	log.Println("✅ Sent cached keyframe data")
 			// }
 		}()
 		return nil

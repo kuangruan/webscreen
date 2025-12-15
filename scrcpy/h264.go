@@ -24,7 +24,7 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 				log.Printf("NALU Type: %d, size: %d", nalType, len(nal))
 				switch nalType {
 				case 7: // SPS
-					da.updateVideoMetaFromSPS(nal)
+					da.updateVideoMetaFromSPS(nal, "h264")
 					SPSData = nal
 					da.keyFrameMutex.Lock()
 					da.LastSPS = SPSData
@@ -38,7 +38,7 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 					log.Println("PPS NALU processed, size:", len(PPSData))
 				case 5: // IDR
 					da.keyFrameMutex.Lock()
-					IDRData = append(startCode, nal...)
+					IDRData = nal
 					da.LastIDR = IDRData
 					da.LastIDRTime = time.Now()
 					da.keyFrameMutex.Unlock()
@@ -67,10 +67,10 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 
 		// If it's a keyframe, send cached config first
 		if header.IsKeyFrame {
-			da.keyFrameMutex.RLock()
+			da.keyFrameMutex.Lock()
 			da.LastIDR = payload
 			da.LastIDRTime = time.Now()
-			da.keyFrameMutex.RUnlock()
+			da.keyFrameMutex.Unlock()
 
 			if da.LastSPS != nil {
 				if !yield(WebRTCFrame{Data: createCopy(da.LastSPS, &da.PayloadPoolSmall), Timestamp: int64(header.PTS)}) {
@@ -83,7 +83,6 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 				}
 			}
 		}
-
 		if !yield(WebRTCFrame{
 			Data:      payload,
 			Timestamp: int64(header.PTS),

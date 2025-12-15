@@ -1,6 +1,7 @@
 package streamServer
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -103,13 +104,17 @@ func (sm *StreamManager) WriteVideoSample(webrtcFrame *scrcpy.WebRTCFrame) error
 
 	var pool *sync.Pool
 	var dataToWrite []byte
+	// log.Printf("length of payload: %v", cap(webrtcFrame.Data))
 	if webrtcFrame.NotConfig {
 		pool = &sm.DataAdapter.PayloadPoolLarge
-		dataToWrite = webrtcFrame.Data[4:]
-
 	} else {
 		duration = 0
 		pool = &sm.DataAdapter.PayloadPoolSmall
+	}
+	if bytes.Equal(webrtcFrame.Data[:4], []byte{0, 0, 0, 1}) {
+		// 去掉起始码
+		dataToWrite = webrtcFrame.Data[4:]
+	} else {
 		dataToWrite = webrtcFrame.Data
 	}
 	sample := media.Sample{

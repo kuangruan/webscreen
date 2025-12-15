@@ -183,12 +183,13 @@ func (da *DataAdapter) StartConvertVideoFrame() {
 				return
 			}
 			frameData := payloadBuf[:frame.Header.Size]
-
+			// niltype := frameData[4] & 0x1F
+			// log.Printf("NALU Type of first NALU in frame: %d", niltype)
 			var iter func(func(WebRTCFrame) bool)
 			if isH265 {
 				iter = da.GenerateWebRTCFrameH265(frame.Header, frameData)
 			} else {
-				iter = da.GenerateWebRTCFrameH264v1(frame.Header, frameData)
+				iter = da.GenerateWebRTCFrameH264(frame.Header, frameData)
 			}
 
 			for webRTCFrame := range iter {
@@ -332,12 +333,23 @@ func (da *DataAdapter) readVideoMeta(conn net.Conn) error {
 	return nil
 }
 
-func (da *DataAdapter) updateVideoMetaFromSPS(sps []byte) {
+func (da *DataAdapter) updateVideoMetaFromSPS(sps []byte, codec string) {
 	if da.LastSPS != nil && bytes.Equal(da.LastSPS[4:], sps) {
 		log.Println("SPS unchanged, no need to update video meta")
 		return
 	}
-	spsInfo, err := ParseSPS(sps, true)
+	var spsInfo SPSInfo
+	var err error
+	switch codec {
+	case "h264":
+		spsInfo, err = ParseSPS_H264(sps, true)
+	case "h265":
+		spsInfo, err = ParseSPS_H265(sps)
+	default:
+		log.Println("Unknown codec type for SPS parsing:", codec)
+		return
+	}
+
 	if err != nil {
 		log.Println("Failed to parse SPS for video meta update:", err)
 		return
@@ -346,6 +358,13 @@ func (da *DataAdapter) updateVideoMetaFromSPS(sps []byte) {
 	da.VideoMeta.Height = spsInfo.Height
 	log.Printf("Updated Video Meta from SPS: Width=%d, Height=%d", da.VideoMeta.Width, da.VideoMeta.Height)
 }
+
+// func (da *DataAdapter) cacheFrame(webrtcFrame *WebRTCFrame, frameType string) {
+// 	switch frameType {
+// 	case "SPS":
+// 		da.keyFrameMutex.Lock()
+
+// }
 
 func readScrcpyFrameHeader(conn net.Conn, headerBuf []byte, header *ScrcpyFrameHeader) error {
 	if _, err := io.ReadFull(conn, headerBuf); err != nil {

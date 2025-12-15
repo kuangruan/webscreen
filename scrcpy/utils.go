@@ -7,8 +7,11 @@ import (
 	"io"
 )
 
+// func ParseSPS_H265(sps []byte) (SPSInfo, error) {
+// 	info := SPSInfo{Width: 0, Height: 0}
+
 // ParseSPS 精确解析SPS关键参数
-func ParseSPS(sps []byte, readCroppingFlag bool) (SPSInfo, error) {
+func ParseSPS_H264(sps []byte, readCroppingFlag bool) (SPSInfo, error) {
 	info := SPSInfo{Width: 0, Height: 0}
 
 	// 验证基本SPS格式
