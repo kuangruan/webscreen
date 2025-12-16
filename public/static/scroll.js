@@ -1,48 +1,57 @@
 
 const videoElementScroll = document.getElementById('remoteVideo');
+const SCROLL_SCALE = 30; // 调整此值以改变滚动灵敏度
 
-// 节流函数，避免发送过于频繁的滚动事件
-const handleWheel = throttle((event) => {
+// 使用 requestAnimationFrame 批量处理滚动事件
+let pendingScroll = { x: 0, y: 0, hScroll: 0, vScroll: 0 };
+let scrollRafScheduled = false;
+let lastScrollCoords = null;
+
+function sendPendingScroll() {
+    if (pendingScroll.hScroll !== 0 || pendingScroll.vScroll !== 0) {
+        const packet = createScrollPacket(
+            pendingScroll.x, 
+            pendingScroll.y, 
+            pendingScroll.hScroll, 
+            pendingScroll.vScroll
+        );
+        
+        if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+            window.ws.send(packet);
+        }
+        
+        // 重置累积的滚动量
+        pendingScroll.hScroll = 0;
+        pendingScroll.vScroll = 0;
+    }
+}
+
+const handleWheel = (event) => {
     // 阻止默认的页面滚动行为
     event.preventDefault();
 
-    const coords = getScreenCoordinates(event);
+    const coords = getScreenCoordinates(event.clientX, event.clientY);
     if (!coords) return;
 
-    // Scrcpy 协议中，滚动值通常是 +1/-1 或更大的整数
-    // event.deltaY > 0 表示向下滚动，对应 Scrcpy 的负值 (通常)
-    // 但 Scrcpy 的 ScrollEvent 定义：
-    // hScroll: horizontal scroll amount (-1: left, 1: right)
-    // vScroll: vertical scroll amount (-1: down, 1: up)
+    // 缓存坐标位置，用于后续批量发送
+    lastScrollCoords = coords;
     
-    // 浏览器 WheelEvent:
-    // deltaY > 0: 向下滚动 (用户手指向上滑)
-    // deltaY < 0: 向上滚动 (用户手指向下滑)
-
-    // 转换逻辑:
-    // deltaY > 0 (Down) -> vScroll = -1
-    // deltaY < 0 (Up)   -> vScroll = 1
-
     // 增加滚动敏感度
-    const SCROLL_SCALE = 30; // 调整此值以改变滚动灵敏度
 
-    let hScroll = 0;
-    let vScroll = 0;
+    // 累积滚动量
+    pendingScroll.x = coords.x;
+    pendingScroll.y = coords.y;
+    pendingScroll.hScroll += Math.round(event.deltaX * SCROLL_SCALE);
+    pendingScroll.vScroll += -Math.round(event.deltaY * SCROLL_SCALE);
 
-    hScroll = Math.round(event.deltaX * SCROLL_SCALE);
-    vScroll = -Math.round(event.deltaY * SCROLL_SCALE);
-
-    if (hScroll === 0 && vScroll === 0) return;
-
-    // 发送滚动包
-    // 注意：我们需要当前的鼠标位置 (x, y)
-    const packet = createScrollPacket(coords.x, coords.y, hScroll, vScroll);
-    // console.log(`Sending scroll event at (${coords.x}, ${coords.y}): hScroll=${hScroll}, vScroll=${vScroll}`);
-    
-    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-        window.ws.send(packet);
+    // 使用 requestAnimationFrame 批量发送，减少消息数量
+    if (!scrollRafScheduled) {
+        scrollRafScheduled = true;
+        requestAnimationFrame(() => {
+            scrollRafScheduled = false;
+            sendPendingScroll();
+        });
     }
-
-}, 16); // 16ms 节流
+};
 
 videoElementScroll.addEventListener('wheel', handleWheel, { passive: false });

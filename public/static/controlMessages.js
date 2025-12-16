@@ -97,6 +97,7 @@ function createScrollPacket(x, y, hScroll, vScroll) {
     view.setInt16(5, hScroll);
     view.setInt16(7, vScroll);
     view.setUint8(9, 0); // No buttons pressed
+    // console.log("Created Scroll Packet:", {x, y, hScroll, vScroll});
     return buffer;
 }
 
