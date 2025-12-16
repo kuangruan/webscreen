@@ -3,7 +3,6 @@ package scrcpy
 import (
 	"bytes"
 	"fmt"
-	"io"
 )
 
 // ParseSPS 精确解析SPS关键参数
@@ -20,21 +19,21 @@ func ParseSPS_H264(sps []byte, readCroppingFlag bool) (SPSInfo, error) {
 	bitReader := &BitReader{Reader: reader}
 
 	// 跳过起始字节 (0x00 0x00 0x00 0x01 或 0x00 0x00 0x01)
-	startCode := 0
-	for i := 0; i < 4; i++ {
-		b, err := reader.ReadByte()
-		if err != nil {
-			return info, err
-		}
-		startCode = (startCode << 8) | int(b)
-	}
+	// startCode := 0
+	// for i := 0; i < 4; i++ {
+	// 	b, err := reader.ReadByte()
+	// 	if err != nil {
+	// 		return info, err
+	// 	}
+	// 	startCode = (startCode << 8) | int(b)
+	// }
 
-	if startCode == 0x00000001 {
-		// 标准起始码，已跳过
-	} else {
-		// 回退
-		reader.Seek(0, io.SeekStart)
-	}
+	// if startCode == 0x00000001 {
+	// 	// 标准起始码，已跳过
+	// } else {
+	// 	// 回退
+	// 	reader.Seek(0, io.SeekStart)
+	// }
 
 	// 跳过NAL单元类型
 	_, err := reader.ReadByte()

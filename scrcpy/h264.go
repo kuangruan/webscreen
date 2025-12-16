@@ -74,22 +74,22 @@ func (da *DataAdapter) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payload
 				isConfig = false
 
 				// 如果没有丢弃SEI，可以考虑发送缓存的 SPS/PPS
-				// da.keyFrameMutex.RLock()
-				// sps, pps := da.LastSPS, da.LastPPS
-				// da.keyFrameMutex.RUnlock()
+				//da.keyFrameMutex.RLock()
+				sps, pps := da.LastSPS, da.LastPPS
+				//da.keyFrameMutex.RUnlock()
 
-				// if sps != nil {
-				// 	if !yield(WebRTCFrame{Data: createCopy(sps), Timestamp: int64(header.PTS)}) {
-				// 		return
-				// 	}
-				// 	log.Printf("(cached SPS) Sending NALU Type: %d, Size: %d", 7, len(sps))
-				// }
-				// if pps != nil {
-				// 	if !yield(WebRTCFrame{Data: createCopy(pps), Timestamp: int64(header.PTS)}) {
-				// 		return
-				// 	}
-				// 	log.Printf("(cached PPS) Sending NALU Type: %d, Size: %d", 8, len(pps))
-				// }
+				if sps != nil {
+					if !yield(WebRTCFrame{Data: createCopy(sps), Timestamp: int64(header.PTS)}) {
+						return
+					}
+					// 	log.Printf("(cached SPS) Sending NALU Type: %d, Size: %d", 7, len(sps))
+				}
+				if pps != nil {
+					if !yield(WebRTCFrame{Data: createCopy(pps), Timestamp: int64(header.PTS)}) {
+						return
+					}
+					// 	log.Printf("(cached PPS) Sending NALU Type: %d, Size: %d", 8, len(pps))
+				}
 			case 1:
 				isConfig = false
 			}

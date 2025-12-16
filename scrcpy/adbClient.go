@@ -28,7 +28,7 @@ func NewADBClient(address string) *ADBClient {
 		Version:      "3.3.3",
 		SCID:         GenerateSCID(),
 		MaxFPS:       "60",
-		VideoBitRate: "20000000",
+		VideoBitRate: "16000000",
 		Control:      "true",
 		Audio:        "true",
 		VideoCodec:   "h264",

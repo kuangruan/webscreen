@@ -83,28 +83,28 @@ func (da *DataAdapter) GenerateWebRTCFrameH265(header ScrcpyFrameHeader, payload
 
 				// 强制注入缓存的 VPS/SPS/PPS，即使包内已经包含了它们
 				// 这能解决部分浏览器兼容性问题，并防止 buffer 复用导致的数据损坏
-				// da.keyFrameMutex.RLock()
-				// vps, sps, pps := da.LastVPS, da.LastSPS, da.LastPPS
-				// da.keyFrameMutex.RUnlock()
+				da.keyFrameMutex.RLock()
+				vps, sps, pps := da.LastVPS, da.LastSPS, da.LastPPS
+				da.keyFrameMutex.RUnlock()
 
-				// if vps != nil {
-				// 	if !yield(WebRTCFrame{Data: createCopy(vps), Timestamp: int64(header.PTS)}) {
-				// 		return
-				// 	}
-				// 	log.Printf("(cached VPS) Sending NALU Type: %d, Size: %d", 32, len(vps))
-				// }
-				// if sps != nil {
-				// 	if !yield(WebRTCFrame{Data: createCopy(sps), Timestamp: int64(header.PTS)}) {
-				// 		return
-				// 	}
-				// 	log.Printf("(cached SPS) Sending NALU Type: %d, Size: %d", 33, len(sps))
-				// }
-				// if pps != nil {
-				// 	if !yield(WebRTCFrame{Data: createCopy(pps), Timestamp: int64(header.PTS)}) {
-				// 		return
-				// 	}
-				// 	log.Printf("(cached PPS) Sending NALU Type: %d, Size: %d", 34, len(pps))
-				// }
+				if vps != nil {
+					if !yield(WebRTCFrame{Data: createCopy(vps), Timestamp: int64(header.PTS)}) {
+						return
+					}
+					log.Printf("(cached VPS) Sending NALU Type: %d, Size: %d", 32, len(vps))
+				}
+				if sps != nil {
+					if !yield(WebRTCFrame{Data: createCopy(sps), Timestamp: int64(header.PTS)}) {
+						return
+					}
+					log.Printf("(cached SPS) Sending NALU Type: %d, Size: %d", 33, len(sps))
+				}
+				if pps != nil {
+					if !yield(WebRTCFrame{Data: createCopy(pps), Timestamp: int64(header.PTS)}) {
+						return
+					}
+					log.Printf("(cached PPS) Sending NALU Type: %d, Size: %d", 34, len(pps))
+				}
 			case 0, 1:
 				isConfig = false
 			}
