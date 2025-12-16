@@ -56,6 +56,11 @@ function getAndroidKeyCode(e) {
 }
 
 document.addEventListener('keydown', (e) => {
+    // Check if UHID keyboard is enabled
+    if (typeof uhidKeyboardEnabled !== 'undefined' && uhidKeyboardEnabled) {
+        return;
+    }
+
     // Ignore if typing in an input field (if we had any)
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
         return;
@@ -75,6 +80,11 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('keyup', (e) => {
+    // Check if UHID keyboard is enabled
+    if (typeof uhidKeyboardEnabled !== 'undefined' && uhidKeyboardEnabled) {
+        return;
+    }
+
     const keyCode = getAndroidKeyCode(e);
     if (keyCode !== null) {
         sendKeyboardEvent(TYPE_KEY_ACTION_UP, keyCode);

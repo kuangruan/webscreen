@@ -25,7 +25,7 @@ func HTTPServer(sm *StreamManager, port string) {
 
 	// 处理 SDP 协商
 	r.POST("/sdp", sm.HandleSDP)
-	r.OPTIONS("/sdp", sm.HandleSDP) // 处理预检请求
+	r.OPTIONS("/sdp", sm.HandleSDP)
 
 	// WebSocket 路由
 	r.GET("/ws", sm.HandleWebSocket)

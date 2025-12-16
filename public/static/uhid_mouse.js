@@ -16,7 +16,7 @@ let mouseRafScheduled = false;
 
 // 自定义 UHID 设备 ID，避免与系统默认设备冲突
 // 范围 0-65535，选择一个不太可能被占用的值
-const UHID_DEVICE_ID = 2222;
+const UHID_DEVICE_ID = 2;
 const UHID_DEVICE_NAME = "";
 
 function initUHIDMouse() {
@@ -61,10 +61,12 @@ function toggleUHIDMouse() {
         initUHIDMouse();
         uhidMouseEnabled = true;
         console.log("UHID Mouse enabled - relative mouse mode");
+        requestPointerLock();
     } else {
         destroyUHIDMouse();
         uhidMouseEnabled = false;
         console.log("UHID Mouse disabled - touch mode");
+        exitPointerLock();
     }
 }
 
@@ -104,6 +106,13 @@ function scheduleMouseSend() {
 
 videoElementMouse.addEventListener('mousedown', (event) => {
     if (!uhidMouseEnabled) return;
+
+    // 如果未锁定，点击时自动请求锁定
+    if (document.pointerLockElement !== videoElementMouse && 
+        document.mozPointerLockElement !== videoElementMouse && 
+        document.webkitPointerLockElement !== videoElementMouse) {
+        requestPointerLock();
+    }
 
     event.preventDefault();
     event.stopPropagation();
@@ -201,20 +210,20 @@ function exitPointerLock() {
     }
 }
 
-// 双击切换指针锁定
-videoElementMouse.addEventListener('dblclick', (event) => {
-    if (!uhidMouseEnabled) return;
+// 双击切换指针锁定 - 已废弃，改为单击自动锁定
+// videoElementMouse.addEventListener('dblclick', (event) => {
+//     if (!uhidMouseEnabled) return;
 
-    event.preventDefault();
+//     event.preventDefault();
 
-    if (document.pointerLockElement === videoElementMouse ||
-        document.mozPointerLockElement === videoElementMouse ||
-        document.webkitPointerLockElement === videoElementMouse) {
-        exitPointerLock();
-    } else {
-        requestPointerLock();
-    }
-});
+//     if (document.pointerLockElement === videoElementMouse ||
+//         document.mozPointerLockElement === videoElementMouse ||
+//         document.webkitPointerLockElement === videoElementMouse) {
+//         exitPointerLock();
+//     } else {
+//         requestPointerLock();
+//     }
+// });
 
 // 监听指针锁定状态变化
 document.addEventListener('pointerlockchange', () => {

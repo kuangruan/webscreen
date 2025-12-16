@@ -35,7 +35,7 @@ html, body {
 }
 
 .controls-container {
-    width: 90px;
+    width: 60px;
     padding: 20px 10px;
     display: flex;
     flex-direction: column;
@@ -45,6 +45,18 @@ html, body {
     box-sizing: border-box;
     align-items: center;
     z-index: 10;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.controls-container::-webkit-scrollbar {
+    width: 4px;
+    background: transparent;
+}
+
+.controls-container::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 2px;
 }
 
 .control-btn {

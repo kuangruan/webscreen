@@ -17,15 +17,45 @@ const videoElement = document.getElementById('remoteVideo');
 
 // 缓存视频元素的位置和尺寸，避免频繁调用 getBoundingClientRect
 let cachedVideoRect = null;
-let cachedScaleX = 1;
-let cachedScaleY = 1;
+let cachedContentRect = { left: 0, top: 0, width: 0, height: 0 };
 
 // 更新缓存的视频尺寸和位置
 function updateVideoCache() {
     if (videoElement.videoWidth && videoElement.videoHeight) {
         cachedVideoRect = videoElement.getBoundingClientRect();
-        cachedScaleX = videoElement.videoWidth / videoElement.clientWidth;
-        cachedScaleY = videoElement.videoHeight / videoElement.clientHeight;
+        
+        const elWidth = cachedVideoRect.width;
+        const elHeight = cachedVideoRect.height;
+        const vidWidth = videoElement.videoWidth;
+        const vidHeight = videoElement.videoHeight;
+        
+        if (elWidth === 0 || elHeight === 0) return false;
+
+        const vidRatio = vidWidth / vidHeight;
+        const elRatio = elWidth / elHeight;
+
+        let drawWidth, drawHeight, startX, startY;
+
+        if (elRatio > vidRatio) {
+            // 元素比视频宽 (Pillarbox: 左右黑边)
+            drawHeight = elHeight;
+            drawWidth = drawHeight * vidRatio;
+            startY = 0;
+            startX = (elWidth - drawWidth) / 2;
+        } else {
+            // 元素比视频高 (Letterbox: 上下黑边)
+            drawWidth = elWidth;
+            drawHeight = drawWidth / vidRatio;
+            startX = 0;
+            startY = (elHeight - drawHeight) / 2;
+        }
+        
+        cachedContentRect = {
+            left: startX,
+            top: startY,
+            width: drawWidth,
+            height: drawHeight
+        };
         return true;
     }
     return false;
@@ -64,12 +94,17 @@ function getScreenCoordinates(clientX, clientY) {
     const offsetX = clientX - cachedVideoRect.left;
     const offsetY = clientY - cachedVideoRect.top;
 
-    const x = Math.round(offsetX * cachedScaleX);
-    const y = Math.round(offsetY * cachedScaleY);
+    // 相对于视频内容区域的坐标
+    const contentX = offsetX - cachedContentRect.left;
+    const contentY = offsetY - cachedContentRect.top;
+
+    // 映射到视频源分辨率
+    const x = (contentX / cachedContentRect.width) * videoElement.videoWidth;
+    const y = (contentY / cachedContentRect.height) * videoElement.videoHeight;
 
     // Clamp coordinates to be within video bounds
-    const clampedX = Math.max(0, Math.min(x, videoElement.videoWidth));
-    const clampedY = Math.max(0, Math.min(y, videoElement.videoHeight));
+    const clampedX = Math.max(0, Math.min(Math.round(x), videoElement.videoWidth));
+    const clampedY = Math.max(0, Math.min(Math.round(y), videoElement.videoHeight));
 
     return { x: clampedX, y: clampedY };
 }

@@ -22,7 +22,7 @@ const (
 func main() {
 	var err error
 	config := map[string]string{
-		"device_serial":      "", // 默认设备
+		"device_serial":      "192.168.0.246", // 默认设备
 		"server_local_path":  ServerLocalPath,
 		"server_remote_path": ServerRemotePath,
 		"scrcpy_version":     ScrcpyVersion,

@@ -2,6 +2,8 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Go Scrcpy WebRTC</title>
     <link rel="stylesheet" href="static/css/index.css">
 </head>
@@ -12,21 +14,43 @@
             <video id="remoteVideo" autoplay muted playsinline></video>
         </div>
         <div class="controls-container">
-            <button onclick="start()" class="control-btn primary">连接</button>
+            <button onclick="start()" class="control-btn primary" title="连接">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button onclick="fullscreenPlayer()" class="control-btn" title="全屏">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            </button>
             <div class="separator"></div>
-            <button onclick="volumeUpButton()" class="control-btn">音量+</button>
-            <button onclick="volumeDownButton()" class="control-btn">音量-</button>
-            <button onclick="powerButton()" class="control-btn">电源</button>
+            <button onclick="volumeUpButton()" class="control-btn" title="音量+">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            </button>
+            <button onclick="volumeDownButton()" class="control-btn" title="音量-">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/></svg>
+            </button>
+            <button onclick="powerButton()" class="control-btn" title="电源">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+            </button>
             <div class="separator"></div>
-            <button onclick="homeButton()" class="control-btn">主页</button>
-            <button onclick="backButton()" class="control-btn">返回</button>
-            <button onclick="menuButton()" class="control-btn">菜单</button>
+            <button onclick="backButton()" class="control-btn" title="返回">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <button onclick="homeButton()" class="control-btn" title="主页">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </button>
+            <button onclick="menuButton()" class="control-btn" title="菜单">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+            </button>
             <div class="separator"></div>
-            <button onclick="rotateButton()" class="control-btn">旋转</button>
-            <div class="separator"></div>
-            <button onclick="fullscreenPlayer()" class="control-btn">全屏</button>
-            <div class="separator"></div>
-            <button onclick="toggleUHIDMouse()" class="control-btn" id="uhidToggleBtn">鼠标模式</button>
+            <button onclick="rotateButton()" class="control-btn" title="旋转">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16.48 2.52c3.27 1.55 5.61 4.72 5.97 8.48h1.5C23.44 4.84 18.29 0 12 0l-1 2h2c1.23 0 2.48.29 3.48.52zM7.52 21.48C4.25 19.94 1.91 16.76 1.55 13H.05C.56 19.16 5.71 24 12 24l1-2h-2c-1.23 0-2.48-.29-3.48-.52z"/></svg>
+            </button>
+            <div class="separator"></div>            
+            <button onclick="toggleUHIDMouse()" class="control-btn" id="uhidToggleBtn" title="鼠标模式">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M13 1.07V9h7c0-4.08-3.05-7.44-7-7.93zM4 15c0 4.42 3.58 8 8 8s8-3.58 8-8v-4H4v4zm7-13.93C7.05 1.56 4 4.92 4 9h7V1.07z"/></svg>
+            </button>
+            <button onclick="toggleUHIDKeyboard()" class="control-btn" id="uhidKeyboardToggleBtn" title="键盘模式">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+            </button>
         </div>
     </div>
     <script>
@@ -73,6 +97,7 @@
     <script src="static/fullscreen.js"></script>
     <!-- ------------ -->
     <script src="static/uhid_mouse.js"></script>
+    <script src="static/uhid_keyboard.js"></script>
     
 </body>
 
