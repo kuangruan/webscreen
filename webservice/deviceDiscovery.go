@@ -2,7 +2,6 @@ package webservice
 
 import (
 	"fmt"
-	"log"
 	"time"
 	"webcpy/webservice/android"
 )
@@ -27,7 +26,7 @@ func (wm *WebMaster) AndroidDevicesDiscovery() {
 			id := fmt.Sprintf("%s:%s:%d", device.Type, device.DeviceID, device.Port)
 			wm.devicesDiscovered[id] = device
 		}
-		log.Printf("Discovered Android device: %+v\n", androidDevices)
+		// log.Printf("Discovered Android device: %+v\n", androidDevices)
 
 		wm.devicesDiscoveredMu.Unlock()
 	}

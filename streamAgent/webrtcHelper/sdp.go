@@ -16,8 +16,12 @@ func HandleSDP(sdp string, vTrack *webrtc.TrackLocalStaticSample, aTrack *webrtc
 
 	// 创建 MediaEngine
 	mimeTypes := []string{}
-	mimeTypes = append(mimeTypes, vTrack.Codec().MimeType)
-	mimeTypes = append(mimeTypes, aTrack.Codec().MimeType)
+	if vTrack != nil {
+		mimeTypes = append(mimeTypes, vTrack.Codec().MimeType)
+	}
+	if aTrack != nil {
+		mimeTypes = append(mimeTypes, aTrack.Codec().MimeType)
+	}
 	m := CreateMediaEngine(mimeTypes)
 	api := webrtc.NewAPI(webrtc.WithMediaEngine(m))
 	// 配置 ICE 服务器 (STUN)，用于穿透 NAT

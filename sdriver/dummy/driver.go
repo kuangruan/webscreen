@@ -2,18 +2,25 @@ package dummy
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"os"
 	"sync"
 	"time"
 
 	"webcpy/sdriver"
+	"webcpy/sdriver/comm"
+
+	"github.com/pion/webrtc/v4/pkg/media/h264reader"
+	"github.com/pion/webrtc/v4/pkg/media/h265reader"
 )
 
 // DummyDriver implements sdriver.SDriver by reading from a local H.264 Annex B file.
 type DummyDriver struct {
 	filePath string
-	fps      int
+
+	mediaMeta sdriver.MediaMeta
 
 	mu       sync.RWMutex
 	running  bool
@@ -30,47 +37,56 @@ type DummyDriver struct {
 
 // New creates a dummy driver to stream from a local H.264 file.
 // fps defines the nominal frame rate used to compute timestamps for VCL NALs.
-func New(c sdriver.StreamConfig) *DummyDriver {
-	if c.Bitrate <= 0 {
-		c.Bitrate = 30
-	}
-	return &DummyDriver{
-		filePath:  c.OtherOpts["file"],
-		fps:       c.Bitrate,
+func New(c sdriver.StreamConfig) (*DummyDriver, error) {
+	d := &DummyDriver{
+		// filePath:  c.OtherOpts["file"],
+		// fps:       c.OtherOpts["fps"],
 		stopCh:    make(chan struct{}),
 		videoCh:   make(chan sdriver.AVBox, 64),
 		audioCh:   make(chan sdriver.AVBox, 1),
 		controlCh: make(chan sdriver.ControlEvent, 1),
 	}
-}
-
-// StartStream starts reading the H.264 file and produces AVBox packets.
-func (d *DummyDriver) StartStream(config sdriver.StreamConfig) (<-chan sdriver.AVBox, <-chan sdriver.AVBox, <-chan sdriver.ControlEvent, error) {
-	d.mu.Lock()
-	if d.running {
-		d.mu.Unlock()
-		return d.videoCh, d.audioCh, d.controlCh, nil
-	}
-	// Optionally override from config.OtherOpts
-	if config.OtherOpts != nil {
-		if p, ok := config.OtherOpts["file"]; ok && p != "" {
-			d.filePath = p
-		}
-		if v, ok := config.OtherOpts["fps"]; ok && v != "" {
-			if parsed, err := parseFPS(v); err == nil && parsed > 0 {
-				d.fps = parsed
-			}
+	if c.OtherOpts != nil {
+		if v, ok := c.OtherOpts["file_path"]; ok {
+			d.filePath = v
 		}
 	}
 	if d.filePath == "" {
+		return nil, errors.New("dummy: file path is empty")
+	}
+
+	d.fetchMediaMeta()
+	log.Printf("Dummy driver media meta: %+v", d.mediaMeta)
+
+	return d, nil
+}
+
+// GetReceiver returns the channels for video, audio, and control events.
+func (d *DummyDriver) GetReceivers() (<-chan sdriver.AVBox, <-chan sdriver.AVBox, chan sdriver.ControlEvent) {
+	return d.videoCh, d.audioCh, d.controlCh
+}
+
+// StartStream starts reading the H.264 file and produces AVBox packets.
+func (d *DummyDriver) StartStreaming() {
+	d.mu.Lock()
+	if d.running {
 		d.mu.Unlock()
-		return nil, nil, nil, errors.New("dummy: file path is empty")
+		return
+	}
+	select {
+	case <-d.stopCh:
+		d.mu.Unlock()
+		return
+	default:
 	}
 	d.running = true
 	d.mu.Unlock()
-
 	go d.loop()
-	return d.videoCh, d.audioCh, d.controlCh, nil
+}
+
+func (d *DummyDriver) StopStreaming() {
+	log.Println("DummyDriver: StopStreaming called")
+	d.Stop()
 }
 
 // SendControl is a no-op for dummy driver.
@@ -104,7 +120,16 @@ func (d *DummyDriver) Capabilities() sdriver.DriverCaps {
 }
 
 // CodecInfo returns the video/audio codec identifiers.
-func (d *DummyDriver) CodecInfo() (string, string) { return "h264", "" }
+func (d *DummyDriver) CodecInfo() (string, string) {
+	if d.mediaMeta.VideoCodecID != "" {
+		return d.mediaMeta.VideoCodecID, ""
+	}
+	return "h264", ""
+}
+
+func (d *DummyDriver) MediaMeta() sdriver.MediaMeta {
+	return d.mediaMeta
+}
 
 // Stop stops the streaming loop and closes channels.
 func (d *DummyDriver) Stop() error {
@@ -117,83 +142,188 @@ func (d *DummyDriver) Stop() error {
 
 func (d *DummyDriver) loop() {
 	defer func() {
-		// Close channels on exit
-		close(d.videoCh)
-		close(d.audioCh)
-		close(d.controlCh)
 		d.mu.Lock()
 		d.running = false
 		d.mu.Unlock()
+		close(d.videoCh)
+		close(d.audioCh)
+		close(d.controlCh)
 	}()
 
-	frameDur := time.Second / time.Duration(d.fps)
-	var pts time.Duration
+	// 设定固定的帧间隔，例如 30fps = 33.3ms
+	ticker := time.NewTicker(33 * time.Millisecond)
+	defer ticker.Stop()
 
 	for {
-		// Read entire file (simple for dummy)
+		// 1. 打开文件
 		f, err := os.Open(d.filePath)
 		if err != nil {
-			return
-		}
-		data, err := io.ReadAll(f)
-		f.Close()
-		if err != nil || len(data) == 0 {
+			fmt.Println("File open error:", err)
 			return
 		}
 
-		nals := splitAnnexB(data)
-		for _, nal := range nals {
+		var nalReader interface {
+			NextNAL() ([]byte, error)
+		}
+
+		if d.mediaMeta.VideoCodecID == "h265" {
+			h265, err := h265reader.NewReader(f)
+			if err != nil {
+				log.Printf("Failed to create H.265 reader: %v", err)
+				f.Close()
+				return
+			}
+			nalReader = &h265ReaderWrapper{h265}
+		} else {
+			h264, err := h264reader.NewReader(f)
+			if err != nil {
+				f.Close()
+				return
+			}
+			nalReader = &h264ReaderWrapper{h264}
+		}
+
+		// 3. 读取 NAL 循环
+		for {
+			// 这一步会自动处理 Annex-B 的分割
+			nalData, err := nalReader.NextNAL()
+			if err == io.EOF {
+				break // 文件读完了，跳出内层循环，重新开始外层循环（Loop）
+			}
+			if err != nil {
+				break
+			}
+
+			// 检查外部停止信号
 			select {
 			case <-d.stopCh:
+				f.Close()
 				return
 			default:
 			}
 
-			// Extract NAL type for H.264
-			if len(nal) == 0 {
-				continue
-			}
-			nalType := nal[0] & 0x1F
-			isVCL := nalType == 1 || nalType == 5
-			isIDR := nalType == 5
-			isConfig := nalType == 7 || nalType == 8 // SPS / PPS
+			var isIDR, isConfig, isVCL bool
 
-			switch nalType {
-			case 6: // SEI
-				// Ignore
-				continue
-			case 7:
+			if d.mediaMeta.VideoCodecID == "h265" {
+				// H.265 NAL header parsing
+				// Forbidden_zero_bit (1) + Nal_unit_type (6) + Nuh_layer_id (6) + Nuh_temporal_id_plus1 (3)
+				// nal_unit_type is bits 1-6 of the first byte
+				nalType := (nalData[0] >> 1) & 0x3F
+
+				// VPS(32), SPS(33), PPS(34)
+				isConfig = nalType >= 32 && nalType <= 34
+				// IDR_W_RADL(19), IDR_N_LP(20), CRA_NUT(21)
+				isIDR = nalType >= 19 && nalType <= 21
+				// VCL NAL units are 0-31
+				isVCL = nalType < 32
+			} else {
+				// H.264 NAL header parsing
+				nalType := nalData[0] & 0x1F
+				isIDR = nalType == 5
+				isConfig = nalType == 7 || nalType == 8
+				isVCL = !isConfig && nalType != 6 // Exclude SEI
+			}
+
+			// 你的业务逻辑：存储 SPS/PPS
+			if isConfig {
 				d.mu.Lock()
-				d.lastSPS = append(d.lastSPS[:0], nal...)
-				d.mu.Unlock()
-			case 8:
-				d.mu.Lock()
-				d.lastPPS = append(d.lastPPS[:0], nal...)
+				// For simplicity, we just store the last config frame as SPS/PPS equivalent
+				// In a real H.265 implementation, you'd want to store VPS/SPS/PPS separately
+				if d.mediaMeta.VideoCodecID == "h265" {
+					// Simple storage for H.265 config frames
+					d.lastSPS = nalData // Just store as lastSPS for now to satisfy RequestIDR
+				} else {
+					if (nalData[0] & 0x1F) == 7 {
+						d.lastSPS = nalData
+					} else {
+						d.lastPPS = nalData
+					}
+				}
 				d.mu.Unlock()
 			}
 
-			// PTSing: advance on VCL NALs, keep config with current PTS
-			ts := pts
-			if isVCL {
-				// Use current PTS, then advance for next frame
-				pts += frameDur
-			}
-
+			// 发送数据
+			// 这里我们先不计算 PTS，交给 Agent 去累加，或者在这里简单处理
 			box := sdriver.AVBox{
-				Data:       nal,
-				PTS:        ts,
+				Data:       nalData,
+				PTS:        0, // 这里填 0，由 Agent 根据接收频率或固定帧率计算
 				IsKeyFrame: isIDR,
 				IsConfig:   isConfig,
 			}
 
-			// Non-blocking send to avoid deadlock on slow consumers
 			select {
 			case d.videoCh <- box:
 			case <-d.stopCh:
+				f.Close()
 				return
 			}
+
+			// --- 核心节奏控制 ---
+			if isVCL {
+				<-ticker.C
+				// ⚠️ 注意：如果你的文件是多 Slice (一个帧由多个 NAL 组成)
+				// 这里会导致严重的慢动作和抖动！
+				// 必须配合我上一条回答里的 ffmpeg -slices 1 命令使用
+			}
 		}
-		// Loop playback
+
+		f.Close()
+		fmt.Println("Looping video...")
+	}
+}
+
+type h264ReaderWrapper struct {
+	*h264reader.H264Reader
+}
+
+func (r *h264ReaderWrapper) NextNAL() ([]byte, error) {
+	nal, err := r.H264Reader.NextNAL()
+	if err != nil {
+		return nil, err
+	}
+	return nal.Data, nil
+}
+
+type h265ReaderWrapper struct {
+	*h265reader.H265Reader
+}
+
+func (r *h265ReaderWrapper) NextNAL() ([]byte, error) {
+	nal, err := r.H265Reader.NextNAL()
+	if err != nil {
+		return nil, err
+	}
+	return nal.Data, nil
+}
+
+func (d *DummyDriver) fetchMediaMeta() {
+	// Try to parse SPS to get resolution
+	if f, err := os.Open(d.filePath); err == nil {
+		// Read first 4KB, should be enough for SPS
+		buf := make([]byte, 4096)
+		n, _ := f.Read(buf)
+		f.Close()
+
+		if n > 0 {
+			nals := splitAnnexB(buf[:n])
+			for _, nal := range nals {
+				if len(nal) > 0 && (nal[0]&0x1F) == 7 {
+					// Found SPS
+					// Remove emulation prevention bytes
+					rbsp := comm.RemoveEmulationPreventionBytes(nal)
+					spsInfo, err := comm.ParseSPS_H264(rbsp, false)
+					if err == nil {
+						d.mediaMeta.Width = int(spsInfo.Width)
+						d.mediaMeta.Height = int(spsInfo.Height)
+						d.mediaMeta.VideoCodecID = "h264"
+						if spsInfo.FrameRate > 0 {
+							d.mediaMeta.FPS = int(spsInfo.FrameRate + 0.5)
+						}
+					}
+					break
+				}
+			}
+		}
 	}
 }
 

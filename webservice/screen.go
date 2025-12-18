@@ -8,5 +8,5 @@ import (
 
 type ScreenSession struct {
 	WSConn *websocket.Conn
-	Agent  agent.SAgent
+	Agent  *agent.Agent
 }

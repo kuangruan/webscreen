@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 	"webcpy/adb"
+	"webcpy/sdriver/comm"
 )
 
 // defaultScrcpyOptions := ScrcpyOptions{
@@ -30,8 +31,8 @@ type DataAdapter struct {
 	ControlChan chan WebRTCControlFrame
 
 	// LinearBuffer 管理器
-	videoBuffer *LinearBuffer
-	audioBuffer *LinearBuffer
+	videoBuffer *comm.LinearBuffer
+	audioBuffer *comm.LinearBuffer
 
 	DeviceName string
 	VideoMeta  ScrcpyVideoMeta
@@ -66,8 +67,8 @@ func NewDataAdapter(config map[string]string) (*DataAdapter, error) {
 
 		// 4MB 足够存放几秒的高清视频数据
 		// 当这 4MB 用完后，我们会分配新的，旧的由 GC 自动回收
-		videoBuffer: NewLinearBuffer(0),
-		audioBuffer: NewLinearBuffer(1 * 1024 * 1024), // 1MB 音频缓冲区
+		videoBuffer: comm.NewLinearBuffer(0),
+		audioBuffer: comm.NewLinearBuffer(1 * 1024 * 1024), // 1MB 音频缓冲区
 	}
 	err = da.adbClient.Push(config["server_local_path"], config["server_remote_path"])
 	if err != nil {
@@ -217,13 +218,13 @@ func (da *DataAdapter) updateVideoMetaFromSPS(sps []byte, codec string) {
 		// log.Println("SPS unchanged, no need to update video meta")
 		return
 	}
-	var spsInfo SPSInfo
+	var spsInfo comm.SPSInfo
 	var err error
 	switch codec {
 	case "h264":
-		spsInfo, err = ParseSPS_H264(sps, true)
+		spsInfo, err = comm.ParseSPS_H264(sps, true)
 	case "h265":
-		spsInfo, err = ParseSPS_H265(sps)
+		spsInfo, err = comm.ParseSPS_H265(sps)
 	default:
 		log.Println("Unknown codec type for SPS parsing:", codec)
 		return

@@ -1,11 +1,9 @@
 package webservice
 
 import (
-	"fmt"
-	"io"
 	"log"
 	"net/http"
-	ScrcpyAgent "webcpy/streamAgent/scrcpy"
+	sagent "webcpy/streamAgent"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -34,10 +32,63 @@ func (wm *WebMaster) handleScreenWS(c *gin.Context) {
 	deviceID := c.Param("device_id")
 	deviceIP := c.Param("device_ip")
 	devicePort := c.Param("device_port")
-
-	sessionID := deviceType + "_" + deviceID + "_" + deviceIP + "_" + devicePort
+	config := sagent.ConnectionConfig{}
+	err = conn.ReadJSON(&config)
+	if err != nil {
+		log.Println("Failed to read connection options:", err)
+		conn.Close()
+		return
+	}
+	if config.DeviceType != deviceType || config.DeviceID != deviceID || config.DeviceIP != deviceIP || config.DevicePort != devicePort {
+		log.Println("Connection options do not match URL parameters")
+		conn.Close()
+		return
+	}
+	// Create a unique session ID
+	sessionID := config.DeviceType + "_" + config.DeviceID + "_" + config.DeviceIP + "_" + config.DevicePort
 	log.Printf("New WebSocket connection for session: %s", sessionID)
-	wm.ScreenSessions[sessionID].WSConn = conn
+	session := wm.ScreenSessions[sessionID]
+	session.WSConn = conn
+
+	agent, err := sagent.NewAgent(config)
+	if err != nil {
+		log.Println("Failed to create agent:", err)
+		conn.Close()
+		return
+	}
+	session.Agent = agent
+	wm.ScreenSessions[sessionID] = session
+
+	finalSDP := agent.CreateWebRTCConnection(string(config.SDP))
+	// conn.WriteMessage(websocket.TextMessage, []byte(finalSDP))
+	capabilities := agent.Capabilities()
+	log.Printf("Driver Capabilities: %+v", capabilities)
+	conn.WriteJSON(map[string]interface{}{"capabilities": capabilities, "sdp": finalSDP})
+	go listenScreenWS(conn, agent)
+
+	agent.StartStreaming()
+}
+
+func listenScreenWS(wsConn *websocket.Conn, agent *sagent.Agent) {
+	for {
+		mType, msg, err := wsConn.ReadMessage()
+		if err != nil {
+			log.Println("WebSocket read error:", err)
+			break
+		}
+
+		switch mType {
+		case websocket.BinaryMessage:
+			log.Printf("Received binary message: %s", string(msg))
+			agent.SendControlEvent(msg)
+		case websocket.TextMessage:
+			log.Printf("Received text message: %s", string(msg))
+		default:
+			log.Printf("Received unsupported message type: %d", mType)
+		}
+	}
+	wsConn.Close()
+	// Implement a listener for screen WebSocket connections if needed
 	// for {
 	// 	// Read message from client
 	// 	messageType, p, err := conn.ReadMessage()
@@ -121,30 +172,4 @@ func (wm *WebMaster) handleScreenWS(c *gin.Context) {
 
 	// }
 
-}
-
-// /:device_type/:device_id/:device_ip/:device_port/sdp?avsync=true
-// client should get vTrack and aTrack after sending offer SDP
-func (wm *WebMaster) handleScreenSDP(c *gin.Context) {
-	// Implement SDP handling for screen here
-	if c.Request.Method == "OPTIONS" {
-		return
-	}
-	body, _ := io.ReadAll(c.Request.Body)
-	deviceType := c.Param("device_type")
-	deviceID := c.Param("device_id")
-	deviceIP := c.Param("device_ip")
-	devicePort := c.Param("device_port")
-
-	avsync_param := c.DefaultQuery("avsync", "off")
-	log.Printf("SDP request avsync: %v", avsync_param)
-	sessionID := deviceType + "_" + deviceID + "_" + deviceIP + "_" + devicePort
-	log.Printf("SDP request for session: %s", sessionID)
-	// var agent agent.SAgent = nil
-	// var agent sagent.SAgent
-	agent := ScrcpyAgent.NewScrcpyAgent(map[string]string{"avsync": avsync_param, "deviceType": deviceType})
-	wm.ScreenSessions[sessionID].Agent = agent
-
-	finalSDP := agent.HandleSDP(string(body))
-	fmt.Fprint(c.Writer, finalSDP)
 }

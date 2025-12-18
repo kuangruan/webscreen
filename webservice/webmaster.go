@@ -13,7 +13,7 @@ type WebMasterConfig struct {
 type WebMaster struct {
 	// WSConns []*websocket.Conn
 
-	ScreenSessions map[string]*ScreenSession
+	ScreenSessions map[string]ScreenSession
 
 	defaultDevice Device
 
@@ -26,7 +26,7 @@ type WebMaster struct {
 
 func New(config WebMasterConfig) *WebMaster {
 	wm := &WebMaster{
-		ScreenSessions:    make(map[string]*ScreenSession),
+		ScreenSessions:    make(map[string]ScreenSession),
 		config:            config,
 		devicesDiscovered: make(map[string]Device),
 	}
@@ -36,7 +36,7 @@ func New(config WebMasterConfig) *WebMaster {
 
 func Default() *WebMaster {
 	wm := &WebMaster{
-		ScreenSessions: make(map[string]*ScreenSession),
+		ScreenSessions: make(map[string]ScreenSession),
 		config: WebMasterConfig{
 			EnableAndroidDiscover: true,
 		},
@@ -57,7 +57,6 @@ func (wm *WebMaster) setRouter() {
 	{
 		screen.GET("/:device_type/:device_id/:device_ip/:device_port", handleScreen)
 		screen.GET("/:device_type/:device_id/:device_ip/:device_port/ws", wm.handleScreenWS)
-		screen.GET("/:device_type/:device_id/:device_ip/:device_port/sdp", wm.handleScreenSDP)
 	}
 	r.GET("/console", handleConsole)
 	api := r.Group("/api")

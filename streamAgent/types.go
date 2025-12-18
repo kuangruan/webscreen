@@ -1,24 +1,21 @@
 package sagent
 
 import (
-	"sync"
 	"webcpy/sdriver"
-
-	"github.com/pion/webrtc/v4"
 )
 
-type Agent struct {
-	sync.RWMutex
-	VideoTrack  *webrtc.TrackLocalStaticSample
-	AudioTrack  *webrtc.TrackLocalStaticSample
-	ControlChan chan sdriver.ControlEvent
-	MediaMeta   sdriver.MediaMeta
+const (
+	DEVICE_TYPE_ANDROID = "android"
+	DEVICE_TYPE_DUMMY   = "dummy"
+)
 
-	Driver sdriver.SDriver
-
-	// 用来接收前端的 RTCP 请求
-	RtpSenderVideo *webrtc.RTPSender
-	RtpSenderAudio *webrtc.RTPSender
-
-	Config map[string]string
+type ConnectionConfig struct {
+	DeviceType string `json:"device_type"`
+	DeviceID   string `json:"device_id"`
+	DeviceIP   string `json:"device_ip"`
+	DevicePort string `json:"device_port"`
+	// FilePath   string               `json:"file_path"` // move to StreamConfig.OtherOpts
+	SDP       string               `json:"sdp"`
+	AVSync    bool                 `json:"av_sync"`
+	StreamCfg sdriver.StreamConfig `json:"stream_config"`
 }

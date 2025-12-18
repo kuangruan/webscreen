@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 	"log"
+	"webcpy/sdriver/comm"
 )
 
 func (da *DataAdapter) convertVideoFrame() {
@@ -29,7 +30,7 @@ func (da *DataAdapter) convertVideoFrame() {
 		if payloadBuf == nil {
 			// 当前 Buffer 满了，分配一个新的 (旧的会被 GC，只要 WebRTC 发送完)
 			// log.Println("Video LinearBuffer full, allocating new chunk")
-			da.videoBuffer = NewLinearBuffer(0)
+			da.videoBuffer = comm.NewLinearBuffer(0)
 			payloadBuf = da.videoBuffer.Get(frameSize)
 			// 极端情况：单帧超过 4MB (几乎不可能)，直接分配独立内存
 			if payloadBuf == nil {
@@ -79,7 +80,7 @@ func (da *DataAdapter) convertAudioFrame() {
 		payloadBuf := da.audioBuffer.Get(frameSize)
 		if payloadBuf == nil {
 			// log.Println("Audio LinearBuffer full, allocating new chunk")
-			da.audioBuffer = NewLinearBuffer(1 * 1024 * 1024)
+			da.audioBuffer = comm.NewLinearBuffer(1 * 1024 * 1024)
 			payloadBuf = da.audioBuffer.Get(frameSize)
 			if payloadBuf == nil {
 				payloadBuf = make([]byte, frameSize)

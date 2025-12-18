@@ -13,7 +13,7 @@ const TOUCH_ACTION_DOWN = 0;
 const TOUCH_ACTION_UP = 1;
 const TOUCH_ACTION_MOVE = 2;
 
-const videoElement = document.getElementById('remoteVideo');
+const videoElementTouch = document.getElementById('remoteVideo');
 
 // 缓存视频元素的位置和尺寸，避免频繁调用 getBoundingClientRect
 let cachedVideoRect = null;
@@ -21,13 +21,13 @@ let cachedContentRect = { left: 0, top: 0, width: 0, height: 0 };
 
 // 更新缓存的视频尺寸和位置
 function updateVideoCache() {
-    if (videoElement.videoWidth && videoElement.videoHeight) {
-        cachedVideoRect = videoElement.getBoundingClientRect();
+    if (videoElementTouch.videoWidth && videoElementTouch.videoHeight) {
+        cachedVideoRect = videoElementTouch.getBoundingClientRect();
         
         const elWidth = cachedVideoRect.width;
         const elHeight = cachedVideoRect.height;
-        const vidWidth = videoElement.videoWidth;
-        const vidHeight = videoElement.videoHeight;
+        const vidWidth = videoElementTouch.videoWidth;
+        const vidHeight = videoElementTouch.videoHeight;
         
         if (elWidth === 0 || elHeight === 0) return false;
 
@@ -62,7 +62,7 @@ function updateVideoCache() {
 }
 
 // 监听视频尺寸变化
-videoElement.addEventListener('loadedmetadata', updateVideoCache);
+videoElementTouch.addEventListener('loadedmetadata', updateVideoCache);
 window.addEventListener('resize', updateVideoCache);
 
 // 使用 requestAnimationFrame 批量处理移动事件，减少延迟
@@ -99,12 +99,12 @@ function getScreenCoordinates(clientX, clientY) {
     const contentY = offsetY - cachedContentRect.top;
 
     // 映射到视频源分辨率
-    const x = (contentX / cachedContentRect.width) * videoElement.videoWidth;
-    const y = (contentY / cachedContentRect.height) * videoElement.videoHeight;
+    const x = (contentX / cachedContentRect.width) * videoElementTouch.videoWidth;
+    const y = (contentY / cachedContentRect.height) * videoElementTouch.videoHeight;
 
     // Clamp coordinates to be within video bounds
-    const clampedX = Math.max(0, Math.min(Math.round(x), videoElement.videoWidth));
-    const clampedY = Math.max(0, Math.min(Math.round(y), videoElement.videoHeight));
+    const clampedX = Math.max(0, Math.min(Math.round(x), videoElementTouch.videoWidth));
+    const clampedY = Math.max(0, Math.min(Math.round(y), videoElementTouch.videoHeight));
 
     return { x: clampedX, y: clampedY };
 }
@@ -127,7 +127,7 @@ function getTouchPressure(touch) {
 // ========== 鼠标事件处理 (单点) ==========
 let activeMousePointer = null;
 
-videoElement.addEventListener('mousedown', (event) => {
+videoElementTouch.addEventListener('mousedown', (event) => {
     if (event.button !== 0) return; // Only Left Click
     activeMousePointer = 0; // 使用 pointerId 0 表示鼠标
     const coords = getScreenCoordinates(event.clientX, event.clientY);
@@ -136,7 +136,7 @@ videoElement.addEventListener('mousedown', (event) => {
     }
 });
 
-videoElement.addEventListener('mouseup', (event) => {
+videoElementTouch.addEventListener('mouseup', (event) => {
     if (activeMousePointer !== null) {
         const coords = getScreenCoordinates(event.clientX, event.clientY);
         if (coords) {
@@ -146,7 +146,7 @@ videoElement.addEventListener('mouseup', (event) => {
     }
 });
 
-videoElement.addEventListener('mousemove', (event) => {
+videoElementTouch.addEventListener('mousemove', (event) => {
     if (activeMousePointer !== null && event.buttons === 1) {
         const coords = getScreenCoordinates(event.clientX, event.clientY);
         if (coords) {
@@ -157,7 +157,7 @@ videoElement.addEventListener('mousemove', (event) => {
 });
 
 // 处理鼠标移出视频区域后释放的情况
-videoElement.addEventListener('mouseleave', (event) => {
+videoElementTouch.addEventListener('mouseleave', (event) => {
     if (activeMousePointer !== null && event.buttons !== 1) {
         const coords = getScreenCoordinates(event.clientX, event.clientY);
         if (coords) {
@@ -170,7 +170,7 @@ videoElement.addEventListener('mouseleave', (event) => {
 // ========== 触摸事件处理 (多点触控) ==========
 const activeTouches = new Map(); // touchIdentifier -> pointerId
 
-videoElement.addEventListener('touchstart', (event) => {
+videoElementTouch.addEventListener('touchstart', (event) => {
     event.preventDefault();
     updateVideoCache(); // 触摸开始时更新缓存
     
@@ -187,7 +187,7 @@ videoElement.addEventListener('touchstart', (event) => {
     }
 }, { passive: false });
 
-videoElement.addEventListener('touchend', (event) => {
+videoElementTouch.addEventListener('touchend', (event) => {
     event.preventDefault();
     
     for (let i = 0; i < event.changedTouches.length; i++) {
@@ -204,7 +204,7 @@ videoElement.addEventListener('touchend', (event) => {
     }
 }, { passive: false });
 
-videoElement.addEventListener('touchmove', (event) => {
+videoElementTouch.addEventListener('touchmove', (event) => {
     event.preventDefault();
     
     for (let i = 0; i < event.changedTouches.length; i++) {
@@ -222,7 +222,7 @@ videoElement.addEventListener('touchmove', (event) => {
     scheduleMoveSend();
 }, { passive: false });
 
-videoElement.addEventListener('touchcancel', (event) => {
+videoElementTouch.addEventListener('touchcancel', (event) => {
     event.preventDefault();
     
     for (let i = 0; i < event.changedTouches.length; i++) {

@@ -3,11 +3,11 @@ package sdriver
 import "time"
 
 type StreamConfig struct {
-	DeviceID   string
-	VideoCodec string
-	AudioCodec string
-	Bitrate    int
-	OtherOpts  map[string]string
+	// DeviceID   string            `json:"device_id"`
+	VideoCodec string            `json:"video_codec"`
+	AudioCodec string            `json:"audio_codec"`
+	Bitrate    int               `json:"bitrate"`
+	OtherOpts  map[string]string `json:"other_opts"`
 }
 
 type AVBox struct {
@@ -25,16 +25,17 @@ type ControlEvent struct {
 }
 
 type MediaMeta struct {
-	VideoCodecID string
-	Width        int
-	Height       int
-	AudioCodecID string
+	VideoCodecID string `json:"video_codec_id"`
+	Width        int    `json:"width"`
+	Height       int    `json:"height"`
+	FPS          int    `json:"fps"`
+	AudioCodecID string `json:"audio_codec_id"`
 }
 
 type DriverCaps struct {
-	CanClipboard bool
-	CanUHID      bool
-	CanVideo     bool
-	CanAudio     bool
-	CanControl   bool
+	CanClipboard bool `json:"can_clipboard"`
+	CanUHID      bool `json:"can_uhid"`
+	CanVideo     bool `json:"can_video"`
+	CanAudio     bool `json:"can_audio"`
+	CanControl   bool `json:"can_control"`
 }
