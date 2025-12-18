@@ -58,7 +58,6 @@ type DataAdapter struct {
 // 一个DataAdapter对应一个scrcpy实例，通过本地端口建立三个连接：视频、音频、控制
 func NewDataAdapter(config map[string]string) (*DataAdapter, error) {
 	var err error
-	// serial := config["device_serial"]
 	da := &DataAdapter{
 		// adbClient:   adb.NewADBClient(serial),
 		VideoChan:   make(chan WebRTCFrame, 10),

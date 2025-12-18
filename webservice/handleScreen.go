@@ -64,12 +64,12 @@ func (wm *WebMaster) handleScreenWS(c *gin.Context) {
 	capabilities := agent.Capabilities()
 	log.Printf("Driver Capabilities: %+v", capabilities)
 	conn.WriteJSON(map[string]interface{}{"capabilities": capabilities, "sdp": finalSDP})
-	go listenScreenWS(conn, agent)
+	go wm.listenScreenWS(conn, agent, sessionID)
 
 	agent.StartStreaming()
 }
 
-func listenScreenWS(wsConn *websocket.Conn, agent *sagent.Agent) {
+func (wm *WebMaster) listenScreenWS(wsConn *websocket.Conn, agent *sagent.Agent, sessionID string) {
 	for {
 		mType, msg, err := wsConn.ReadMessage()
 		if err != nil {
@@ -88,6 +88,7 @@ func listenScreenWS(wsConn *websocket.Conn, agent *sagent.Agent) {
 		}
 	}
 	wsConn.Close()
+	wm.removeScreenSession(sessionID)
 	// Implement a listener for screen WebSocket connections if needed
 	// for {
 	// 	// Read message from client
@@ -172,4 +173,8 @@ func listenScreenWS(wsConn *websocket.Conn, agent *sagent.Agent) {
 
 	// }
 
+}
+
+func (wm *WebMaster) removeScreenSession(sessionID string) {
+	delete(wm.ScreenSessions, sessionID)
 }
