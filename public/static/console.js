@@ -11,7 +11,7 @@ const defaultStreamConfig = {
     driver_config: {
         max_fps: '60',
         video_codec_options: '',
-        new_display: ''  // format: "1920x1080/60" or empty
+        new_display: '1920x1080/60'  // format: "1920x1080/60" or empty
     }
 };
 
