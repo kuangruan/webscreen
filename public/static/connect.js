@@ -28,7 +28,7 @@ var CONFIG = (function() {
                 audio_codec: "opus",
                 video_bit_rate: "20000000",
 
-                new_display: "1920x1080/60",
+                // new_display: "1920x1080/60",
             }
         };
     }
