@@ -26,7 +26,7 @@ func (da *ScrcpyDriver) GenerateWebRTCFrameOpus(header ScrcpyFrameHeader, payloa
 
 			yield(sdriver.AVBox{
 				Data:     configBuf,
-				PTS:      time.Duration(header.PTS),
+				PTS:      time.Duration(header.PTS) * time.Microsecond,
 				IsConfig: true,
 			})
 			return
@@ -35,7 +35,7 @@ func (da *ScrcpyDriver) GenerateWebRTCFrameOpus(header ScrcpyFrameHeader, payloa
 		// 普通音频帧，直接透传 (零拷贝)
 		yield(sdriver.AVBox{
 			Data:     payload,
-			PTS:      time.Duration(header.PTS),
+			PTS:      time.Duration(header.PTS) * time.Microsecond,
 			IsConfig: false,
 		})
 	}
