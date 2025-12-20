@@ -86,7 +86,7 @@ func (wm *WebMaster) Serve() {
 	// if wm.config.EnableAndroidDiscover {
 	// 	go wm.AndroidDevicesDiscovery()
 	// }
-	wm.router.Run(":8081")
+	wm.router.Run(":8079")
 }
 
 func (wm *WebMaster) Close() {
