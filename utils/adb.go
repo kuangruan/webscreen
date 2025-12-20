@@ -13,7 +13,7 @@ import (
 )
 
 // GetADBPath returns the path to the ADB executable.
-// It checks the current directory, then the system PATH.
+// It checks the current directory, then the system PATH using 'which' command.
 // If not found, it downloads ADB from Google's repository.
 func GetADBPath() (string, error) {
 	exeName := "adb"
@@ -29,9 +29,14 @@ func GetADBPath() (string, error) {
 		}
 	}
 
-	// 2. Check PATH
-	if path, err := exec.LookPath("adb"); err == nil {
-		return path, nil
+	// 2. Check PATH using 'which' command (more compatible, especially for Termux)
+	cmd := exec.Command("which", "adb")
+	output, err := cmd.Output()
+	if err == nil {
+		path := strings.TrimSpace(string(output))
+		if path != "" {
+			return path, nil
+		}
 	}
 
 	// 3. Download
