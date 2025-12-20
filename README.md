@@ -21,7 +21,11 @@ It can run on:
 at both `amd64` and `arm64`
 
 ## Prerequisites
-Please refer to [scrcpy](https://github.com/Genymobile/scrcpy/blob/master/README.md#prerequisites)
+For device side, please refer to [scrcpy](https://github.com/Genymobile/scrcpy/blob/master/README.md#prerequisites)
+
+For server side, you'd better have `adb` in your PATH first.
+
+for client side, you only need a web browser.
 
 Additionally, a [modified scrcpy-server](https://github.com/huonwe/scrcpy-0x63) is used.
 
