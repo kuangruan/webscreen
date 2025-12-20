@@ -53,7 +53,7 @@ func Default(staticFS fs.FS) *WebMaster {
 }
 
 func (wm *WebMaster) setRouter() {
-	gin.SetMode(gin.ReleaseMode)
+	// gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	subFS, _ := fs.Sub(wm.staticFS, "static")
 	r.StaticFS("/static", http.FS(subFS))
