@@ -3,22 +3,27 @@ package scrcpy
 import (
 	"bytes"
 	"context"
+	"embed"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 	"webscreen/sdriver"
 	"webscreen/sdriver/comm"
 )
 
+//go:embed bin/scrcpy-server-master
+var scrcpyServerData embed.FS
+
 const (
-	SCRCPY_SERVER_LOCAL_PATH  = "./bin/scrcpy-server"
+	SCRCPY_SERVER_LOCAL_PATH  = "./scrcpy-server"
 	SCRCPY_SERVER_ANDROID_DST = "/data/local/tmp/scrcpy-server"
 	SCRCPY_PROXY_PORT_DEFAULT = "27183"
-	SCRCPY_VERSION            = "3.3.3"
+	SCRCPY_VERSION            = "3.3.4"
 )
 
 type ScrcpyDriver struct {
@@ -71,7 +76,18 @@ func New(config map[string]string, deviceID string) (*ScrcpyDriver, error) {
 	da.ctx, da.cancel = context.WithCancel(context.Background())
 	da.adbClient = NewADBClient(deviceID, da.scid, da.ctx)
 
+	data, err := scrcpyServerData.ReadFile("bin/scrcpy-server-master")
+	if err != nil {
+		log.Printf("[scrcpy] 读取 scrcpy-server 失败: %v", err)
+		return nil, err
+	}
+	err = os.WriteFile(SCRCPY_SERVER_LOCAL_PATH, data, 0755)
+	if err != nil {
+		log.Printf("[scrcpy] 写入 scrcpy-server 本地文件失败: %v", err)
+		return nil, err
+	}
 	err = da.adbClient.PushScrcpyServer(SCRCPY_SERVER_LOCAL_PATH, SCRCPY_SERVER_ANDROID_DST)
+	os.Remove(SCRCPY_SERVER_LOCAL_PATH)
 	if err != nil {
 		log.Printf("[scrcpy] 设置 推送scrcpy-server失败: %v", err)
 		return nil, err

@@ -57,9 +57,9 @@ func (wm *WebMaster) setRouter() {
 	r := gin.Default()
 	subFS, _ := fs.Sub(wm.staticFS, "static")
 	r.StaticFS("/static", http.FS(subFS))
-	// r.GET("/", func(ctx *gin.Context) {
-	// 	ctx.Redirect(302, "/console")
-	// })
+	r.GET("/", func(ctx *gin.Context) {
+		ctx.Redirect(302, "/console")
+	})
 	screen := r.Group("/screen")
 	{
 		screen.GET("/:id", func(ctx *gin.Context) {
