@@ -9,6 +9,7 @@ Webscreen is a self-hosted screen streaming web application for Android devices,
 It supports:
 - Video, Audio, Control
 - UHID Devices (Mouse, Keyboard, Gamepad)
+- Clipboard Sync
 - Maybe more...
 
 It can run on:
