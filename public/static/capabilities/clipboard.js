@@ -47,3 +47,4 @@ function reveiveClipboard(packet) {
     window.dispatchEvent(clipboardEvent);
 }
 
+getClipboard()
