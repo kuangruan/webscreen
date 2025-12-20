@@ -131,7 +131,7 @@
         let checkTimeout;
         function triggerCheck() {
             clearTimeout(checkTimeout);
-            checkTimeout = setTimeout(checkOrientation, 500);
+            checkTimeout = setTimeout(checkOrientation, 1000);
         }
 
         window.addEventListener('resize', triggerCheck);
