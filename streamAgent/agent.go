@@ -6,9 +6,9 @@ import (
 	"log"
 	"sync"
 	"time"
-	"webcpy/sdriver"
-	"webcpy/sdriver/dummy"
-	"webcpy/sdriver/scrcpy"
+	"webscreen/sdriver"
+	"webscreen/sdriver/dummy"
+	"webscreen/sdriver/scrcpy"
 
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"

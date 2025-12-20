@@ -3,12 +3,12 @@ const jitterBufferTargetMs = 35; // 目标缓冲区延迟 (毫秒)
 // Load CONFIG from sessionStorage if available, otherwise use URL params or defaults
 var CONFIG = (function () {
     // Try to load from sessionStorage first (set by console.js)
-    const stored = sessionStorage.getItem('webcpy_stream_config');
+    const stored = sessionStorage.getItem('webscreen_stream_config');
     if (stored) {
         try {
             const parsed = JSON.parse(stored);
             // Clear it after reading to avoid stale data
-            sessionStorage.removeItem('webcpy_stream_config');
+            sessionStorage.removeItem('webscreen_stream_config');
             return parsed;
         } catch (e) {
             console.warn('Failed to parse stored config:', e);

@@ -6,7 +6,7 @@ import (
 	"iter"
 	"log"
 	"time"
-	"webcpy/sdriver"
+	"webscreen/sdriver"
 )
 
 // GenerateWebRTCFrameOpus 处理 Opus 音频帧

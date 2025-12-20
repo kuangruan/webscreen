@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"webcpy/sdriver"
-	"webcpy/sdriver/comm"
+	"webscreen/sdriver"
+	"webscreen/sdriver/comm"
 
 	"github.com/pion/webrtc/v4/pkg/media/h264reader"
 	"github.com/pion/webrtc/v4/pkg/media/h265reader"

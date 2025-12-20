@@ -1,7 +1,7 @@
 package webservice
 
 import (
-	"webcpy/webservice/android"
+	"webscreen/webservice/android"
 
 	"github.com/gin-gonic/gin"
 )

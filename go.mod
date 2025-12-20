@@ -1,4 +1,4 @@
-module webcpy
+module webscreen
 
 go 1.25.4
 

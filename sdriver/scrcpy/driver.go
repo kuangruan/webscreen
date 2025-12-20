@@ -10,8 +10,8 @@ import (
 	"net"
 	"sync"
 	"time"
-	"webcpy/sdriver"
-	"webcpy/sdriver/comm"
+	"webscreen/sdriver"
+	"webscreen/sdriver/comm"
 )
 
 const (

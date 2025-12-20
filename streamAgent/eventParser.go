@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"webcpy/sdriver"
+	"webscreen/sdriver"
 )
 
 func (a *Agent) parseEvent(raw []byte) (sdriver.Event, error) {

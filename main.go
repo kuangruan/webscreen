@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"webcpy/webservice"
+	"webscreen/webservice"
 )
 
 func main() {

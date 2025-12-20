@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"webcpy/sdriver"
+	"webscreen/sdriver"
 )
 
 // type SDriver interface {

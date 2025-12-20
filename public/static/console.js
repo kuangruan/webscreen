@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'webcpy_device_configs';
+const STORAGE_KEY = 'webscreen_device_configs';
 
 let knownDevices = [];
 let activeConfigSerial = null;
@@ -332,7 +332,7 @@ function startStream(serial) {
     };
 
     // Store CONFIG in sessionStorage so connect.js can access it
-    sessionStorage.setItem('webcpy_stream_config', JSON.stringify(streamConfig));
+    sessionStorage.setItem('webscreen_stream_config', JSON.stringify(streamConfig));
 
     // Redirect to the screen page
     const deviceType = encodeURIComponent(streamConfig.device_type);

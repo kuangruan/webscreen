@@ -1,7 +1,7 @@
 package webservice
 
 import (
-	agent "webcpy/streamAgent"
+	agent "webscreen/streamAgent"
 
 	"github.com/gorilla/websocket"
 )

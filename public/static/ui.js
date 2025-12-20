@@ -4,11 +4,11 @@
  * @param {number} duration 持续时间(ms)
  */
 function showToast(message, duration = 3000) {
-    let toast = document.getElementById('webcpy-toast');
+    let toast = document.getElementById('webscreen-toast');
     
     if (!toast) {
         toast = document.createElement('div');
-        toast.id = 'webcpy-toast';
+        toast.id = 'webscreen-toast';
         
         // 注入样式
         Object.assign(toast.style, {

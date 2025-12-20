@@ -3,7 +3,7 @@ package webservice
 import (
 	"fmt"
 	"time"
-	"webcpy/webservice/android"
+	"webscreen/webservice/android"
 )
 
 func (wm *WebMaster) AndroidDevicesDiscovery() {
