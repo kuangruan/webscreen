@@ -2,8 +2,7 @@ services:
   webscreen:
     build: .
     container_name: webscreen-service
-    ports:
-      - "8079:8079"
+    network_mode: "host"
     privileged: true
     volumes:
       - /dev/bus/usb:/dev/bus/usb

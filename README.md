@@ -38,7 +38,7 @@ You can also use docker:
 ```bash
 docker run -d \
   --name webscreen \
-  -p 8079:8079 \
+  --network host \
   dukihiroi/webscreen:latest
 ```
 
