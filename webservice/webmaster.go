@@ -57,7 +57,7 @@ func (wm *WebMaster) setRouter() {
 	})
 	screen := r.Group("/screen")
 	{
-		screen.GET("/display", handleScreen)
+		screen.GET("/:id", handleScreen)
 		screen.GET("/ws", wm.handleScreenWS)
 	}
 	r.GET("/console", handleConsole)

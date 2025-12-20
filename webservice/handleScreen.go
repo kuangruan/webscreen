@@ -41,6 +41,7 @@ func (wm *WebMaster) handleScreenWS(c *gin.Context) {
 		conn.Close()
 		return
 	}
+	log.Printf("driver config: %+v", config.DriverConfig)
 	// if config.DeviceType != deviceType || config.DeviceID != deviceID || config.DeviceIP != deviceIP || config.DevicePort != devicePort {
 	// 	log.Println("Connection options do not match URL parameters")
 	// 	// conn.Close()

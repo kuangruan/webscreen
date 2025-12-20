@@ -3,12 +3,14 @@ const jitterBufferTargetMs = 35; // 目标缓冲区延迟 (毫秒)
 // Load CONFIG from sessionStorage if available, otherwise use URL params or defaults
 var CONFIG = (function () {
     // Try to load from sessionStorage first (set by console.js)
-    const stored = sessionStorage.getItem('webscreen_stream_config');
+    const stored = sessionStorage.getItem('webscreen_device_configs');
+    console.log("Stored config:", stored);
     if (stored) {
         try {
             const parsed = JSON.parse(stored);
+            console.log("Using stored config:", parsed);
             // Clear it after reading to avoid stale data
-            sessionStorage.removeItem('webscreen_stream_config');
+            sessionStorage.removeItem('webscreen_device_configs');
             return parsed;
         } catch (e) {
             console.warn('Failed to parse stored config:', e);
@@ -23,7 +25,9 @@ var CONFIG = (function () {
             device_id: decodeURIComponent(pathMatch[2]),
             device_ip: decodeURIComponent(pathMatch[3]),
             device_port: decodeURIComponent(pathMatch[4]),
+            av_sync: false,
             driver_config: {
+                max_fps: "60",
                 video_codec: "h264",
                 audio_codec: "opus",
                 video_bit_rate: "20000000",
@@ -95,6 +99,7 @@ async function start() {
     window.ws.onopen = () => {
         console.log('WebSocket connected');
         // 发送 Config 和 SDP
+        console.log("config:", CONFIG);
         const config = {
             ...CONFIG,
             sdp: pc.localDescription.sdp
@@ -140,7 +145,7 @@ async function start() {
                     break;
                 case 'error':
                     console.error("Error from server:", message);
-                    showToast("Error from server: " + message.message, 5000);
+                    showToast(i18n.t('error_from_server', {msg: message.message}), 5000);
                     break;
                 default:
                     console.warn("Unknown message status:", message.status);
