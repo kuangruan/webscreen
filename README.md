@@ -43,8 +43,11 @@ docker run -d \
   dukihiroi/webscreen:latest
 ```
 
+`host` network mode is recommended because of UDP traffic.
 
 You might need to pair Android device first. `Pair device with pairing code` is supported. Once you finished pairing, type `Connect` button and enter necessary information.
+
+After you start streaming, you might need to manually make the scene a little changed, to get the screen. You can simply click volume button to make it.
 
 Please notice that the ports in `pair` and `connect` are different.
 ![sample](doc/assets/wireless_debugging.png)
