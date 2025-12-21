@@ -57,34 +57,27 @@ func (sd *ScrcpyDriver) SendEvent(event sdriver.Event) error {
 }
 
 func (sd *ScrcpyDriver) RequestIDR(firstFrame bool) {
-	sd.keyFrameMutex.RLock()
-	sps := createCopy(sd.LastSPS)
-	pps := createCopy(sd.LastPPS)
-	vps := createCopy(sd.LastVPS)
-	idr := createCopy(sd.LastIDR)
-	sd.keyFrameMutex.RUnlock()
-
-	if len(vps) > 0 {
+	if len(sd.LastVPS) > 0 {
 		select {
-		case sd.VideoChan <- sdriver.AVBox{Data: vps, PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
+		case sd.VideoChan <- sdriver.AVBox{Data: createCopy(sd.LastVPS), PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
 		default:
 		}
 	}
-	if len(sps) > 0 {
+	if len(sd.LastSPS) > 0 {
 		select {
-		case sd.VideoChan <- sdriver.AVBox{Data: sps, PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
+		case sd.VideoChan <- sdriver.AVBox{Data: createCopy(sd.LastSPS), PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
 		default:
 		}
 	}
-	if len(pps) > 0 {
+	if len(sd.LastPPS) > 0 {
 		select {
-		case sd.VideoChan <- sdriver.AVBox{Data: pps, PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
+		case sd.VideoChan <- sdriver.AVBox{Data: createCopy(sd.LastPPS), PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
 		default:
 		}
 	}
-	if len(idr) > 0 && firstFrame {
+	if len(sd.LastIDR) > 0 && firstFrame {
 		select {
-		case sd.VideoChan <- sdriver.AVBox{Data: idr, PTS: sd.LastPTS, IsKeyFrame: true, IsConfig: false}:
+		case sd.VideoChan <- sdriver.AVBox{Data: createCopy(sd.LastIDR), PTS: sd.LastPTS, IsKeyFrame: true, IsConfig: false}:
 		default:
 		}
 	}
