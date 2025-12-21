@@ -11,5 +11,5 @@ COPY ${BINARY_PATH} ./webscreen
 
 ENV PORT=8079
 EXPOSE $PORT
-
-ENTRYPOINT ./webscreen -port $PORT
+RUN chmod +x ./webscreen
+ENTRYPOINT ["sh", "-c", "./webscreen -port ${PORT}"]
