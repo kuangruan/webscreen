@@ -3,23 +3,8 @@ package scrcpy
 import (
 	"fmt"
 	"log"
-	"time"
 	"webscreen/sdriver"
 )
-
-// type SDriver interface {
-// 	GetReceivers() (<-chan AVBox, <-chan AVBox, chan ControlEvent)
-
-// 	StartStreaming()
-// 	StopStreaming()
-
-// 	SendControl(event ControlEvent) error
-// 	RequestIDR() error
-// 	Capabilities() DriverCaps
-// 	CodecInfo() (videoCodec string, audioCodec string)
-// 	MediaMeta() MediaMeta
-// 	Stop()
-// }
 
 func (sd *ScrcpyDriver) GetReceivers() (<-chan sdriver.AVBox, <-chan sdriver.AVBox, <-chan sdriver.Event) {
 	return sd.VideoChan, sd.AudioChan, sd.ControlChan
@@ -71,38 +56,38 @@ func (sd *ScrcpyDriver) SendEvent(event sdriver.Event) error {
 	return nil
 }
 
-func (sd *ScrcpyDriver) RequestIDR() {
+func (sd *ScrcpyDriver) RequestIDR(firstFrame bool) {
 	sd.keyFrameMutex.RLock()
-	sps := append([]byte(nil), sd.LastSPS...)
-	pps := append([]byte(nil), sd.LastPPS...)
-	vps := append([]byte(nil), sd.LastVPS...)
-	// idr := append([]byte(nil), sd.LastIDR...)
+	sps := createCopy(sd.LastSPS)
+	pps := createCopy(sd.LastPPS)
+	vps := createCopy(sd.LastVPS)
+	idr := createCopy(sd.LastIDR)
 	sd.keyFrameMutex.RUnlock()
 
 	if len(vps) > 0 {
 		select {
-		case sd.VideoChan <- sdriver.AVBox{Data: vps, PTS: time.Duration(time.Now().Unix()), IsKeyFrame: false, IsConfig: true}:
+		case sd.VideoChan <- sdriver.AVBox{Data: vps, PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
 		default:
 		}
 	}
 	if len(sps) > 0 {
 		select {
-		case sd.VideoChan <- sdriver.AVBox{Data: sps, PTS: time.Duration(time.Now().Unix()), IsKeyFrame: false, IsConfig: true}:
+		case sd.VideoChan <- sdriver.AVBox{Data: sps, PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
 		default:
 		}
 	}
 	if len(pps) > 0 {
 		select {
-		case sd.VideoChan <- sdriver.AVBox{Data: pps, PTS: time.Duration(time.Now().Unix()), IsKeyFrame: false, IsConfig: true}:
+		case sd.VideoChan <- sdriver.AVBox{Data: pps, PTS: sd.LastPTS, IsKeyFrame: false, IsConfig: true}:
 		default:
 		}
 	}
-	// if len(idr) > 0 {
-	// 	select {
-	// 	case sd.VideoChan <- sdriver.AVBox{Data: idr, PTS: 0, IsKeyFrame: true, IsConfig: false}:
-	// 	default:
-	// 	}
-	// }
+	if len(idr) > 0 && firstFrame {
+		select {
+		case sd.VideoChan <- sdriver.AVBox{Data: idr, PTS: sd.LastPTS, IsKeyFrame: true, IsConfig: false}:
+		default:
+		}
+	}
 	sd.KeyFrameRequest()
 }
 

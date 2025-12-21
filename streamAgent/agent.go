@@ -145,7 +145,7 @@ func (sa *Agent) HandleRTCP() {
 				}
 				lastRTCPTime = now
 				log.Println("IDR requested via RTCP PLI")
-				sa.driver.RequestIDR()
+				sa.driver.RequestIDR(false)
 			}
 		}
 	}
@@ -181,7 +181,7 @@ func (sa *Agent) StartStreaming() {
 	go sa.StreamingVideo()
 	go sa.StreamingAudio()
 	go sa.HandleRTCP()
-	sa.driver.RequestIDR()
+	sa.driver.RequestIDR(true)
 }
 
 func (sa *Agent) PauseStreaming() {

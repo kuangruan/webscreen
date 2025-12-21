@@ -89,7 +89,7 @@ func (d *DummyDriver) Pause() {
 func (d *DummyDriver) SendEvent(event sdriver.Event) error { return nil }
 
 // RequestIDR attempts to resend cached SPS/PPS instantly (if available).
-func (d *DummyDriver) RequestIDR() {
+func (d *DummyDriver) RequestIDR(firstFrame bool) {
 	d.mu.RLock()
 	sps := append([]byte(nil), d.lastSPS...)
 	pps := append([]byte(nil), d.lastPPS...)

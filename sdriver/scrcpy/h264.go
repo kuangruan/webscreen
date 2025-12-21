@@ -68,10 +68,10 @@ func (da *ScrcpyDriver) GenerateWebRTCFrameH264(header ScrcpyFrameHeader, payloa
 			case 6: // SEI discard
 				continue
 			case 5: // IDR
-				// da.keyFrameMutex.Lock()
-				// da.LastIDR = createCopy(nal) // 必须拷贝
-				// da.keyFrameMutex.Unlock()
 				isConfig = false
+				da.keyFrameMutex.Lock()
+				da.LastIDR = createCopy(nal) // 必须拷贝
+				da.keyFrameMutex.Unlock()
 
 				// 如果没有丢弃SEI，可以考虑发送缓存的 SPS/PPS
 				da.keyFrameMutex.RLock()

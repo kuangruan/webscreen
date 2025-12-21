@@ -7,7 +7,7 @@ type SDriver interface {
 	Start()
 	Pause()
 
-	RequestIDR()
+	RequestIDR(firstFrame bool)
 	Capabilities() DriverCaps
 	// CodecInfo() (videoCodec string, audioCodec string)
 	MediaMeta() MediaMeta
