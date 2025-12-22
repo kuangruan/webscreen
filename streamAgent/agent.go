@@ -9,6 +9,7 @@ import (
 	"webscreen/sdriver"
 	"webscreen/sdriver/dummy"
 	"webscreen/sdriver/scrcpy"
+	linuxX11Driver "webscreen/sdriver/x11"
 
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
@@ -62,6 +63,10 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 			return nil, err
 		}
 		sa.driver = androidDriver
+	case DEVICE_TYPE_X11:
+		// 初始化 Linux Driver
+		linuxDriver := linuxX11Driver.New("0", "0")
+		sa.driver = linuxDriver
 	default:
 		log.Printf("Unsupported device type: %s", config.DeviceType)
 		return nil, fmt.Errorf("unsupported device type: %s", config.DeviceType)

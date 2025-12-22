@@ -1,6 +1,7 @@
 package sagent
 
 const (
+	DEVICE_TYPE_X11     = "x11"
 	DEVICE_TYPE_ANDROID = "android"
 	DEVICE_TYPE_DUMMY   = "dummy"
 )

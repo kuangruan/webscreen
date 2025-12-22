@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/grandcat/zeroconf v1.0.0
+	github.com/jezek/xgb v1.1.1
 	github.com/pion/rtcp v1.2.16
 	github.com/pion/webrtc/v4 v4.1.8
 )
