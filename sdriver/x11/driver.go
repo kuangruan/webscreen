@@ -11,6 +11,7 @@ import (
 	"webscreen/sdriver/comm"
 )
 
+// sudo killall Xvfb
 type LinuxDriver struct {
 	videoChan   chan sdriver.AVBox
 	videoBuffer *comm.LinearBuffer
@@ -145,41 +146,86 @@ func (d *LinuxDriver) GetReceivers() (<-chan sdriver.AVBox, <-chan sdriver.AVBox
 }
 
 func (d *LinuxDriver) SendEvent(event sdriver.Event) error {
-	// 1. 类型断言：判断是不是触摸/鼠标事件
-	// 注意：你的 log 显示传入的是 *TouchEvent 指针
-	touch, ok := event.(*sdriver.TouchEvent)
-	if !ok {
-		// 如果是指针不行，试试值类型 (取决于上层调用)
-		if val, ok := event.(sdriver.TouchEvent); ok {
-			touch = &val
-		} else {
-			// 暂不支持其他类型
-			return nil
-		}
-	}
-
-	// 2. 构造二进制包
+	// log.Printf("X11Driver: Sending event type %T", event)
 	buf := new(bytes.Buffer)
 
-	// [Byte 0] Event Type (Mouse/Touch 统一按 Mouse 处理)
-	// 你的定义里 EVENT_TYPE_MOUSE = 0x01
-	buf.WriteByte(byte(sdriver.EVENT_TYPE_MOUSE))
+	// 常量定义 (需确保与 sdriver 包一致，或直接使用字面量)
+	const (
+		PacketTypeKey   = 0x00
+		PacketTypeMouse = 0x01
+	)
 
-	// [Byte 1] Action
-	buf.WriteByte(touch.Action)
+	switch v := event.(type) {
 
-	// [Byte 2-5] PosX (BigEndian)
-	binary.Write(buf, binary.BigEndian, touch.PosX)
+	case *sdriver.MouseEvent:
+		buf.WriteByte(PacketTypeMouse) // Header: 0x01
 
-	// [Byte 6-9] PosY (BigEndian)
-	binary.Write(buf, binary.BigEndian, touch.PosY)
+		// Payload
+		buf.WriteByte(v.Action)                        // [0] Action
+		binary.Write(buf, binary.BigEndian, v.PosX)    // [1-4] X (或 DeltaX)
+		binary.Write(buf, binary.BigEndian, v.PosY)    // [5-8] Y (或 DeltaY)
+		binary.Write(buf, binary.BigEndian, v.Buttons) // [9-12] Buttons
 
-	// [Byte 10-13] Buttons (BigEndian)
-	binary.Write(buf, binary.BigEndian, touch.Buttons)
+		// 填充滚轮数据 (对应 TouchEvent 里的 int16(0))
+		// 注意：需确保结构体里是 int16，或者在这里强转
+		binary.Write(buf, binary.BigEndian, int16(v.WheelDeltaX)) // [13-14] Wheel X
+		binary.Write(buf, binary.BigEndian, int16(v.WheelDeltaY)) // [15-16] Wheel Y
+	// =================================================================
+	// Case 1: 触摸事件 -> 鼠标包
+	// 接收端 Payload 长度: 16 bytes
+	// 结构: [Action 1][X 4][Y 4][Btn 4][Wheel X][Wheel Y]
+	// =================================================================
+	case *sdriver.TouchEvent:
+		buf.WriteByte(PacketTypeMouse) // Header: 0x01
 
-	// 3. 发送数据 (总共 14 字节)
-	_, err := d.conn.Write(buf.Bytes())
-	return err
+		// Payload (16 bytes)
+		buf.WriteByte(v.Action)                        // [0] Action
+		binary.Write(buf, binary.BigEndian, v.PosX)    // [1-4] X
+		binary.Write(buf, binary.BigEndian, v.PosY)    // [5-8] Y
+		binary.Write(buf, binary.BigEndian, v.Buttons) // [9-12] Buttons
+		binary.Write(buf, binary.BigEndian, int16(0))  // [13-14] Wheel (触摸无滚轮)
+		binary.Write(buf, binary.BigEndian, int16(0))  // [15-16] Padding (关键！补齐第16字节)
+
+	// =================================================================
+	// Case 2: 滚动事件 -> 鼠标包
+	// =================================================================
+	case *sdriver.ScrollEvent:
+		buf.WriteByte(PacketTypeMouse) // Header: 0x01
+
+		// Payload (16 bytes)
+		buf.WriteByte(0)                               // [0] Action (滚动视为 Move)
+		binary.Write(buf, binary.BigEndian, v.PosX)    // [1-4] X
+		binary.Write(buf, binary.BigEndian, v.PosY)    // [5-8] Y
+		binary.Write(buf, binary.BigEndian, v.Buttons) // [9-12] Buttons
+		// [13-14] Wheel (将 HScroll 转为 int16)
+		binary.Write(buf, binary.BigEndian, int16(v.HScroll))
+		// [15-16] Wheel (将 VScroll 转为 int16)
+		binary.Write(buf, binary.BigEndian, int16(v.VScroll))
+
+	// =================================================================
+	// Case 3: 键盘事件 -> 键盘包
+	// 接收端 Payload 长度: 5 bytes
+	// 结构: [Action 1][KeyCode 4]
+	// =================================================================
+	case *sdriver.KeyEvent:
+		buf.WriteByte(PacketTypeKey) // Header: 0x00
+
+		// Payload (5 bytes)
+		buf.WriteByte(v.Action)                        // [0] Action
+		binary.Write(buf, binary.BigEndian, v.KeyCode) // [1-4] KeyCode
+
+	// 其他事件直接忽略
+	default:
+
+		return nil
+	}
+
+	// 发送数据
+	if buf.Len() > 0 {
+		_, err := d.conn.Write(buf.Bytes())
+		return err
+	}
+	return nil
 }
 func (d *LinuxDriver) Pause() {}
 
@@ -193,6 +239,7 @@ func (d *LinuxDriver) Capabilities() sdriver.DriverCaps {
 		CanControl:   true,
 		CanClipboard: false,
 		CanUHID:      false,
+		IsLinux:      true,
 	}
 }
 

@@ -18,6 +18,8 @@ func (a *Agent) parseEvent(raw []byte) (sdriver.Event, error) {
 	// 	return a.parseMouseEvent(raw)
 	case sdriver.EVENT_TYPE_TOUCH:
 		return a.parseTouchEvent(raw)
+	case sdriver.EVENT_TYPE_MOUSE:
+		return a.parseMouseEvent(raw)
 	case sdriver.EVENT_TYPE_KEY:
 		return a.parseKeyEvent(raw)
 	case sdriver.EVENT_TYPE_SCROLL:
@@ -55,6 +57,25 @@ func (a *Agent) parseTouchEvent(raw []byte) (*sdriver.TouchEvent, error) {
 		Width:     uint16(a.driver.MediaMeta().Width),
 		Height:    uint16(a.driver.MediaMeta().Height),
 	}
+	return e, nil
+}
+
+func (a *Agent) parseMouseEvent(raw []byte) (*sdriver.MouseEvent, error) {
+	// 1(Type) + 1(Action) + 4(X) + 4(Y) + 4(Buttons) + 2(WheelX) + 2(WheelY) = 18
+	if len(raw) != 18 {
+		return nil, fmt.Errorf("invalid mouse event message length: %d", len(raw))
+	}
+
+	e := &sdriver.MouseEvent{
+		// [0] 是 Type，调用者可能已经判断过了，这里跳过
+		Action:      raw[1],                                     // Offset 1
+		PosX:        binary.BigEndian.Uint32(raw[2:6]),          // Offset 2-5 (4 bytes)
+		PosY:        binary.BigEndian.Uint32(raw[6:10]),         // Offset 6-9 (4 bytes)
+		Buttons:     binary.BigEndian.Uint32(raw[10:14]),        // Offset 10-13 (4 bytes)
+		WheelDeltaX: int16(binary.BigEndian.Uint16(raw[14:16])), // Offset 14-15 (2 bytes)
+		WheelDeltaY: int16(binary.BigEndian.Uint16(raw[16:18])), // Offset 16-17 (2 bytes)
+	}
+
 	return e, nil
 }
 

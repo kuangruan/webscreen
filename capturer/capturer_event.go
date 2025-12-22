@@ -6,25 +6,57 @@ import (
 	"github.com/jezek/xgb/xtest"
 )
 
+// ================= 定义动作常量 =================
+const WheelStep = 40
+
+// 鼠标动作
+const (
+	MouseActionMove = 0
+	MouseActionDown = 1
+	MouseActionUp   = 2
+)
+
+// X11 鼠标按键映射 (标准定义)
+const (
+	MouseBtnLeft      = 1
+	MouseBtnMiddle    = 2
+	MouseBtnRight     = 3
+	MouseBtnWheelUp   = 4
+	MouseBtnWheelDown = 5
+)
+
+// Web 端传入的 Button 掩码 (与你之前的定义保持一致)
+const (
+	WebBtnPrimary   uint32 = 1 << 0 // 左键
+	WebBtnSecondary uint32 = 1 << 1 // 右键 (Web 通常把右键定义为 2)
+	WebBtnTertiary  uint32 = 1 << 2 // 中键
+)
+
+// 键盘动作
+const (
+	KeyActionDown = 0 // 按下
+	KeyActionUp   = 1 // 抬起
+)
+
+// ================= InputController 结构体 =================
+
 type InputController struct {
 	conn *xgb.Conn
 	root xproto.Window
 }
 
-// NewInputController 连接到指定的 display (:99)
+// NewInputController 初始化并连接到指定的 display
 func NewInputController(display string) (*InputController, error) {
-	// 连接 X Server
 	c, err := xgb.NewConnDisplay(display)
 	if err != nil {
 		return nil, err
 	}
 
-	// 初始化 XTEST 扩展 (用于模拟输入)
 	if err := xtest.Init(c); err != nil {
+		c.Close()
 		return nil, err
 	}
 
-	// 获取 Root 窗口 (通常是整个屏幕)
 	setup := xproto.Setup(c)
 	root := setup.Roots[0].Root
 
@@ -34,91 +66,146 @@ func NewInputController(display string) (*InputController, error) {
 	}, nil
 }
 
+// Close 关闭连接
 func (ic *InputController) Close() {
 	if ic.conn != nil {
 		ic.conn.Close()
 	}
 }
 
-// MoveMouse 移动鼠标到绝对坐标 (x, y)
-func (ic *InputController) MoveMouse(x, y int16) {
-	// 使用 WarpPointer 直接瞬移鼠标指针
-	// SrcWindow: None, DstWindow: Root
-	// SrcX/Y, SrcWidth/Height: 0 (忽略源)
-	// DstX, DstY: 目标坐标
-	xproto.WarpPointer(ic.conn, xproto.Window(0), ic.root, 0, 0, 0, 0, x, y)
+// ================= 对外暴露的两个核心函数 =================
 
-	// 刷新缓冲区，确保指令立即发出
-	// ic.conn.Sync() // 如果觉得卡顿可以把 Sync 去掉，依靠系统自动 flush
-}
+// HandleMouseEvent 处理所有鼠标相关事件（移动、点击、拖拽、滚轮）
+// action: 0=Move, 1=Down, 2=Up
+// x, y: 绝对坐标
+// buttons: Web端传来的按钮掩码 (支持左/中/右键)
+// wheelDeltaX, wheelDeltaY: 滚轮滚动值 (如果是纯点击事件，传 0 即可)
+func (ic *InputController) HandleMouseEvent(action byte, x, y int16, buttons uint32, wheelDeltaX, wheelDeltaY int16) {
+	ic.moveMouse(x, y)
 
-// MouseClick 模拟鼠标点击
-// button: 1=左键, 2=中键, 3=右键, 4=滚轮上, 5=滚轮下
-// isPress: true=按下, false=抬起
-func (ic *InputController) MouseEvent(button byte, isPress bool) {
-	// XTEST 模拟输入
-	// type: ButtonPress / ButtonRelease
-	// detail: 按钮编号
-	var eventType byte
-	if isPress {
-		eventType = xproto.ButtonPress
-	} else {
-		eventType = xproto.ButtonRelease
+	if action == MouseActionMove && wheelDeltaY == 0 && wheelDeltaX == 0 {
+		return
 	}
 
-	// 最后一个参数 0 是 delay，通常设为 0
-	xtest.FakeInput(ic.conn, eventType, button, 0, ic.root, 0, 0, 0)
+	// 处理滚轮
+	if wheelDeltaY != 0 {
+		ic.handleWheel(wheelDeltaY)
+		return
+	}
+
+	// 处理点击
+	if action == MouseActionDown || action == MouseActionUp {
+		x11Btn := ic.mapWebBtnToX11(buttons)
+		isPress := (action == MouseActionDown)
+		ic.sendMouseInput(x11Btn, isPress)
+	}
 }
 
-// KeyPress 模拟键盘按键
-// keycode: X11 的按键编码 (注意：不是 ASCII，需要转换)
-func (ic *InputController) KeyEvent(keycode byte, isPress bool) {
+// HandleKeyboardEvent 处理所有键盘相关事件
+// action: 0=Down, 1=Up
+// keycode: X11 对应的硬件扫描码 (Hardware Keycode)
+func (ic *InputController) HandleKeyboardEvent(action byte, keycode byte) {
+	// 过滤无效的 Keycode
+	if keycode == 0 {
+		return
+	}
+
+	isPress := (action == KeyActionDown)
+
 	var eventType byte
 	if isPress {
 		eventType = xproto.KeyPress
 	} else {
 		eventType = xproto.KeyRelease
 	}
+
+	// 发送键盘事件
+	// detail=keycode, delay=0
 	xtest.FakeInput(ic.conn, eventType, keycode, 0, ic.root, 0, 0, 0)
+
+	// 如果需要立即生效，可以 Sync，但在高频输入下不建议每次都 Sync
+	// ic.conn.Sync()
 }
 
-// 请添加到 InputController 的方法中
+// ================= 内部辅助函数 (不对外暴露) =================
 
-func (ic *InputController) HandleMouseEvent(action byte, x, y int16, buttons uint32) {
-	// 1. 移动鼠标 (无论 Move/Down/Up 都需要先移动到位)
-	ic.MoveMouse(x, y)
+// moveMouse 移动光标
+func (ic *InputController) moveMouse(x, y int16) {
+	// WarpPointer 瞬间移动
+	xproto.WarpPointer(ic.conn, xproto.Window(0), ic.root, 0, 0, 0, 0, x, y)
+}
 
-	// 动作枚举 (你的定义)
-	const (
-		ActionMove = 0
-		ActionDown = 1
-		ActionUp   = 2
-	)
+// sendMouseInput 发送鼠标按键指令
+func (ic *InputController) sendMouseInput(button byte, isPress bool) {
+	var eventType byte
+	if isPress {
+		eventType = xproto.ButtonPress
+	} else {
+		eventType = xproto.ButtonRelease
+	}
+	xtest.FakeInput(ic.conn, eventType, button, 0, ic.root, 0, 0, 0)
+}
 
-	// 如果只是移动，做完 MoveMouse 就结束了
-	if action == ActionMove {
+// handleWheel 处理滚轮滚动
+// Web 端传来的通常是像素差或行数，X11 需要转换为 Button 4 (上) 或 5 (下) 的点击
+func (ic *InputController) handleWheel(deltaY int16) {
+	if deltaY == 0 {
 		return
 	}
 
-	// 2. 解析按键
-	// 将 Web 的掩码映射到 X11 的按键号
-	var x11Button byte
-
-	// 你的常量定义：BUTTON_PRIMARY = 1, SECONDARY = 2, TERTIARY = 4
-	if buttons&1 != 0 { // BUTTON_PRIMARY
-		x11Button = 1 // X11 左键
-	} else if buttons&2 != 0 { // BUTTON_SECONDARY
-		x11Button = 3 // X11 右键 (注意映射)
-	} else if buttons&4 != 0 { // BUTTON_TERTIARY
-		x11Button = 2 // X11 中键
+	var button byte
+	// 注意：Web 的 deltaY > 0 通常是页面向下滚，对应滚轮向下 (Button 5)
+	// 但不同浏览器可能不同，如果发现反了，这里调换一下 4 和 5
+	if deltaY < 0 {
+		button = MouseBtnWheelUp // 4
 	} else {
-		// 默认左键 (防止空值)
-		x11Button = 1
+		button = MouseBtnWheelDown // 5
 	}
 
-	// 3. 执行点击
-	isPress := (action == ActionDown)
-	ic.MouseEvent(x11Button, isPress)
+	// 计算需要触发几次点击
+	// 使用绝对值计算
+	absDelta := deltaY
+	if absDelta < 0 {
+		absDelta = -absDelta
+	}
 
-	// log.Printf("Mouse: Action=%d, X=%d, Y=%d, Btn=%d", action, x, y, x11Button)
+	// 比如 delta 是 120，Step 是 40，那就点击 3 次
+	// 至少点击 1 次
+	clicks := int(absDelta / WheelStep)
+	if clicks == 0 {
+		clicks = 1
+	}
+
+	// 限制最大单次点击数，防止前端发疯导致后端死循环卡死
+	if clicks > 20 {
+		clicks = 20
+	}
+
+	// 循环发送点击
+	for i := 0; i < clicks; i++ {
+		ic.sendMouseInput(button, true)  // Press
+		ic.sendMouseInput(button, false) // Release
+
+		// 极其重要！
+		// 如果不加 Sleep，XServer 可能会把极短时间内的多次输入合并或丢弃
+		// 或者应用程序反应不过来
+		// 这里的 Sleep 不需要太久，几微秒即可，但在 Go 里最小单位方便控制的是 Sleep(0) 或 yield
+		// xtest 实际上很快，一般不需要 sleep，如果发现滚动不顺畅再加
+	}
+}
+
+// mapWebBtnToX11 将 Web 的按钮掩码映射为 X11 按钮 ID
+func (ic *InputController) mapWebBtnToX11(buttons uint32) byte {
+	if buttons&WebBtnPrimary != 0 {
+		return MouseBtnLeft
+	}
+	if buttons&WebBtnSecondary != 0 {
+		return MouseBtnRight // 注意：Web Secondary 对应 X11 右键 (ID 3)
+	}
+	if buttons&WebBtnTertiary != 0 {
+		return MouseBtnMiddle // Web Tertiary 对应 X11 中键 (ID 2)
+	}
+
+	// 默认左键
+	return MouseBtnLeft
 }

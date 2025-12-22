@@ -25,4 +25,8 @@ type DriverCaps struct {
 	CanVideo     bool `json:"can_video"`
 	CanAudio     bool `json:"can_audio"`
 	CanControl   bool `json:"can_control"`
+
+	IsAndroid bool `json:"is_android"` // If true, show the android-specific buttons, like vol buttons, back, home, recent apps.
+	IsLinux   bool `json:"is_linux"`
+	IsWindows bool `json:"is_windows"`
 }

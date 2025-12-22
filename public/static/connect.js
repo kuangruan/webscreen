@@ -19,7 +19,7 @@ var CONFIG = (function () {
             }
         };
     }
-    
+
     const stored = sessionStorage.getItem('webscreen_device_configs');
     console.log("Stored config:", stored);
     if (stored) {
@@ -159,7 +159,7 @@ async function start() {
                     break;
                 case 'error':
                     console.error("Error from server:", message);
-                    showToast(i18n.t('error_from_server', {msg: message.message}), 2000);
+                    showToast(i18n.t('error_from_server', { msg: message.message }), 2000);
                     break;
                 default:
                     console.warn("Unknown message status:", message.status);
@@ -272,16 +272,26 @@ async function updateUIBasedOnCapabilities(caps) {
     if (caps.can_control) {
         // Load control scripts
         try {
-            await loadScript('/static/capabilities/controlMessages.js');
-            await loadScript('/static/capabilities/buttons.js');
-            await loadScript('/static/capabilities/keyboard.js');
-            await loadScript('/static/capabilities/touch.js');
-            await loadScript('/static/capabilities/scroll.js');
-            show('.feature-control');
+            if (caps.is_linux) {
+                await loadScript('/static/capabilities/linux_mouse.js');
+                await loadScript('/static/capabilities/keyboard.js');
+                // show('.feature-linux-mouse');
+            }
+            if (caps.is_android) {
+                await loadScript('/static/capabilities/controlMessages.js');
+                await loadScript('/static/capabilities/keyboard.js');
+                await loadScript('/static/capabilities/touch.js');
+                await loadScript('/static/capabilities/scroll.js');
+                await loadScript('/static/capabilities/buttons.js');
+                show('.feature-android-buttons');
+                show('.feature-control');
+            }
+
             console.log("Control scripts loaded");
         } catch (e) {
             console.error("Failed to load control scripts", e);
         }
+
         // Handle Clipboard
         if (caps.can_clipboard) {
             try {

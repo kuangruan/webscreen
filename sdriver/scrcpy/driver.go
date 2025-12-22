@@ -72,6 +72,10 @@ func New(config map[string]string, deviceID string) (*ScrcpyDriver, error) {
 		audioBuffer: comm.NewLinearBuffer(1 * 1024 * 1024), // 1MB 音频缓冲区
 
 		scid: GenerateSCID(),
+
+		capabilities: sdriver.DriverCaps{
+			IsAndroid: true,
+		},
 	}
 	da.ctx, da.cancel = context.WithCancel(context.Background())
 	da.adbClient = NewADBClient(deviceID, da.scid, da.ctx)

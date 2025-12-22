@@ -70,6 +70,19 @@ func (e TouchEvent) Type() EventType {
 	return EVENT_TYPE_TOUCH
 }
 
+type MouseEvent struct {
+	Action      byte
+	PosX        uint32
+	PosY        uint32
+	Buttons     uint32
+	WheelDeltaX int16
+	WheelDeltaY int16
+}
+
+func (e MouseEvent) Type() EventType {
+	return EVENT_TYPE_MOUSE
+}
+
 type KeyEvent struct {
 	Action  byte
 	KeyCode uint32
