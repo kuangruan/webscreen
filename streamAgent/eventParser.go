@@ -36,7 +36,7 @@ func (a *Agent) parseEvent(raw []byte) (sdriver.Event, error) {
 	case sdriver.EVENT_TYPE_SET_CLIPBOARD:
 		return a.parseSetClipboardEvent(raw)
 	case sdriver.EVENT_TYPE_REQ_IDR:
-		return a.parseReqIDREvent(raw)
+		return a.parseIDRReqEvent(raw)
 	default:
 		return nil, fmt.Errorf("unknown event type: %d", eventType)
 	}
@@ -90,8 +90,8 @@ func (a *Agent) parseRotateEvent(raw []byte) (*sdriver.RotateEvent, error) {
 	return &sdriver.RotateEvent{}, nil
 }
 
-func (a *Agent) parseReqIDREvent(raw []byte) (*sdriver.ReqIDREvent, error) {
-	return &sdriver.ReqIDREvent{}, nil
+func (a *Agent) parseIDRReqEvent(raw []byte) (*sdriver.IDRReqEvent, error) {
+	return &sdriver.IDRReqEvent{}, nil
 }
 
 func (a *Agent) parseUHIDCreateEvent(raw []byte) (*sdriver.UHIDCreateEvent, error) {
