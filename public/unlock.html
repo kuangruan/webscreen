@@ -4,73 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>安全锁定</title>
+    <title>Lock</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/static/i18n.js"></script>
     <script src="/static/ui.js"></script>
-    <style>
-        /* 禁止移动端双击缩放 */
-        * {
-            touch-action: manipulation;
-        }
-
-        /* 隐藏数字输入框的箭头 */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        /* 震动动画 */
-        @keyframes shake {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            20% {
-                transform: translateX(-10px);
-            }
-
-            40% {
-                transform: translateX(10px);
-            }
-
-            60% {
-                transform: translateX(-10px);
-            }
-
-            80% {
-                transform: translateX(10px);
-            }
-        }
-
-        .animate-shake {
-            animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
-        }
-
-        /* 按键点击态 */
-        .key-btn:active {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        /* 平滑过渡 */
-        .pin-dot {
-            transition: all 0.2s ease;
-        }
-
-        /* 隐藏主界面，解锁后显示 */
-        #main-app {
-            display: none;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-
-        #lock-screen {
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/lock.css">
 </head>
 
 <body
@@ -91,8 +29,8 @@
             </div>
 
             <div class="text-center">
-                <h1 class="text-xl font-medium tracking-wide">输入访问密码</h1>
-                <p id="status-text" class="text-sm text-gray-400 mt-2 h-5">请输入 6 位 PIN 码</p>
+                <h1 class="text-xl font-medium tracking-wide" data-i18n="unlock_please_enter_pin"></h1>
+                <p id="status-text" class="text-sm text-gray-400 mt-2 h-5" data-i18n="unlock_enter_6_digits"></p>
             </div>
 
             <!-- PIN 码圆点显示 -->
@@ -114,9 +52,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h2 class="text-xl font-bold text-white mb-2">已暂时锁定</h2>
-            <p class="text-gray-400 text-center px-8">多次尝试失败，请在 <span id="countdown"
-                    class="text-blue-400 font-mono text-lg">60</span> 秒后重试</p>
+            <h2 class="text-xl font-bold text-white mb-2" data-i18n="unlock_temporarily_locked"></h2>
+            <p class="text-gray-400 text-center px-8"><span data-i18n="unlock_locked_message"></span> <span id="countdown"
+                    class="text-blue-400 font-mono text-lg">60</span> <span>秒后重试</span></p>
         </div>
 
         <!-- 数字键盘 -->
@@ -172,7 +110,7 @@
             </div>
 
             <div class="text-center mt-8">
-                <button onclick="alert('请联系管理员重置')" class="text-sm text-gray-500 hover:text-gray-300">忘记密码?</button>
+                <button onclick="alert(i18n.t('unlock_contact_admin'))" class="text-sm text-gray-500 hover:text-gray-300" data-i18n="unlock_forgot_password"></button>
             </div>
         </div>
     </div>
@@ -186,8 +124,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
             </div>
-            <h1 class="text-2xl font-bold mb-2">解锁成功</h1>
-            <p class="text-gray-500 mb-6">欢迎进入 Webscreen 管理控制台</p>
+            <h1 class="text-2xl font-bold mb-2" data-i18n="unlock_success"></h1>
+            <p class="text-gray-500 mb-6" data-i18n="unlock_welcome"></p>
         </div>
     </div>
 
@@ -230,9 +168,9 @@
             if (currentPin.length > 0) {
                 currentPin = currentPin.slice(0, -1);
                 updateDots();
-                // 恢复默认提示
+        // 恢复默认提示
                 if (currentPin.length === 0) {
-                    setStatus("请输入 6 位 PIN 码", false);
+                    setStatus(i18n.t("unlock_enter_6_digits"), false);
                 }
             }
         }
@@ -265,7 +203,7 @@
         // 提交 PIN 码
         async function submitPin() {
             isProcessing = true;
-            setStatus("正在验证...");
+            setStatus(i18n.t("unlock_now_verifying"));
 
             try {
                 let data;
@@ -283,7 +221,7 @@
 
             } catch (error) {
                 console.error(error);
-                setStatus("网络错误，请重试", true);
+                setStatus(i18n.t("unlock_network_error"), true);
                 shakeScreen();
                 currentPin = "";
                 updateDots();
@@ -310,9 +248,9 @@
                         let now = new Date()
                         let diffSeconds = Math.ceil((lockUntil - now) / 1000)
                         startBlockCountdown(diffSeconds);
-                        setStatus("已锁定", true);
+                        setStatus(i18n.t("unlock_temporarily_locked"), true);
                     } else {
-                        setStatus(`密码错误，还剩 ${data.leftTries} 次尝试`, true);
+                        setStatus(i18n.t("unlock_wrong_password", { leftTries: data.leftTries }), true);
                         isProcessing = false;
                     }
                     break;
@@ -326,7 +264,7 @@
 
         // 界面解锁动画
         function unlockWeb() {
-            setStatus("验证成功", false);
+            setStatus(i18n.t("unlock_verify_success"), false);
             const lockScreen = document.getElementById('lock-screen');
             const mainApp = document.getElementById('main-app');
 
@@ -378,7 +316,7 @@
                     clearInterval(timer);
                     isBlocked = false;
                     blockOverlay.classList.add('hidden');
-                    setStatus("请重新输入 PIN 码", false);
+                    setStatus(i18n.t("unlock_enter_6_digits"), false);
                 }
             }, 1000);
         }

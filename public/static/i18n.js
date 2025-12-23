@@ -58,7 +58,21 @@ const translations = {
         config_device_title: "Configure {serial}",
         video_codec_options: "video_codec_options",
         error_from_server: "Error from server: {msg}",
-        call_api_failed: "API request failed"
+        call_api_failed: "API request failed",
+
+        unlock_now_verifying: "Verifying...",
+        unlock_please_enter_pin: "Please enter the PIN to unlock",
+        unlock_enter_6_digits: "Please enter 6-digit PIN code",
+        unlock_temporarily_locked: "Temporarily Locked",
+        unlock_too_many_attempts: "Too many failed attempts. Please try again in {seconds} seconds",
+        unlock_locked_message: "Locked due to multiple failed attempts",
+        unlock_wrong_password: "Wrong PIN, {leftTries} attempts remaining",
+        unlock_forgot_password: "Forgot PIN?",
+        unlock_contact_admin: "Please contact the administrator to reset",
+        unlock_success: "Unlock Successful",
+        unlock_welcome: "Welcome to Webscreen Management Console",
+        unlock_network_error: "Network error, please try again",
+        unlock_verify_success: "Verification successful",
     },
     zh: {
         app_title: "WebScreen 控制台",
@@ -119,7 +133,21 @@ const translations = {
         config_device_title: "配置 {serial}",
         video_codec_options: "video_codec_options",
         error_from_server: "服务器错误: {msg}",
-        call_api_failed: "API请求失败"
+        call_api_failed: "API请求失败",
+
+        unlock_now_verifying: "正在验证...",
+        unlock_please_enter_pin: "请输入 PIN 码以解锁",
+        unlock_enter_6_digits: "请输入 6 位 PIN 码",
+        unlock_temporarily_locked: "已暂时锁定",
+        unlock_too_many_attempts: "多次尝试失败，请在 {seconds} 秒后重试",
+        unlock_locked_message: "由于多次尝试失败，已被锁定",
+        unlock_wrong_password: "密码错误，还剩 {leftTries} 次尝试",
+        unlock_forgot_password: "忘记密码?",
+        unlock_contact_admin: "请联系管理员重置",
+        unlock_success: "解锁成功",
+        unlock_welcome: "欢迎进入 Webscreen 管理控制台",
+        unlock_network_error: "网络错误，请重试",
+        unlock_verify_success: "验证成功",
     },
     ja: {
         app_title: "WebScreen コンソール",
@@ -180,7 +208,21 @@ const translations = {
         config_device_title: "{serial} の設定",
         video_codec_options: "video_codec_options",
         error_from_server: "サーバーエラー: {msg}",
-        call_api_failed: "APIリクエストに失敗しました"
+        call_api_failed: "APIリクエストに失敗しました",
+
+        unlock_now_verifying: "検証中...",
+        unlock_please_enter_pin: "ロック解除するにはPINを入力してください",
+        unlock_enter_6_digits: "6桁のPINコードを入力してください",
+        unlock_temporarily_locked: "一時的にロック中",
+        unlock_too_many_attempts: "失敗の試み回数が多すぎます。{seconds} 秒後にもう一度お試しください",
+        unlock_locked_message: "複数回の失敗により、ロックされています",
+        unlock_wrong_password: "PINが間違っています。残り {leftTries} 回の試行があります",
+        unlock_forgot_password: "PINを忘れた方",
+        unlock_contact_admin: "管理者に連絡してリセットしてください",
+        unlock_success: "ロック解除成功",
+        unlock_welcome: "Webscreen 管理コンソールへようこそ",
+        unlock_network_error: "ネットワークエラー。もう一度お試しください",
+        unlock_verify_success: "検証成功",
     }
 };
 
