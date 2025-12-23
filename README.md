@@ -14,7 +14,6 @@ It can run on:
 at both `amd64` and `arm64`
 
 
-
 Android supports ([scrcpy](https://github.com/Genymobile/scrcpy)):
 - Video, Audio, Control
 - UHID Devices (Mouse, Keyboard, Gamepad)
@@ -31,10 +30,18 @@ For device side, please refer to [scrcpy](https://github.com/Genymobile/scrcpy/b
 For server side, you'd better have `adb` and `xvfb (if need this feature)` in your PATH first.
 ```bash
 # for Termux
-pkg install android-tools xorg-server-xvfb
+pkg install android-tools
+# clone the repo and build
+git clone https://github.com/huonwe/webscreen.git
+cd webscreen
+go build -o sdriver/xvfb/bin/capturer_xvfb ./capturer
+go build -ldflags "-checklinkname=0"
 
 # for Debian
-apt install adb xvfb
+apt install adb
+# if you want to stream xvfb display
+apt install xvfb ffmpeg
+# then you can directly use pre-built binary
 ```
 for client side, you only need a web browser.
 
@@ -62,3 +69,8 @@ You might need to pair Android device first. `Pair device with pairing code` is 
 After you start streaming, you might need to manually make the scene a little changed, to get the screen. You can simply click volume button to make it.
 
 Please notice that the ports in `pair` and `connect` are different. See details [here](https://developer.android.com/studio/debug/dev-options#enable)
+
+## Known Issues
+- UHID Mouse wouldn't work in some redroid images
+- Xvfb wouldn't work in docker and termux
+- termux can't use arm64 pre-built binary
