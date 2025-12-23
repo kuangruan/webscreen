@@ -28,8 +28,14 @@ Linux supports (xvfb):
 ## Prerequisites
 For device side, please refer to [scrcpy](https://github.com/Genymobile/scrcpy/blob/master/README.md#prerequisites)
 
-For server side, you'd better have `adb` in your PATH first.
+For server side, you'd better have `adb` and `xvfb (if need this feature)` in your PATH first.
+```bash
+# for Termux
+pkg install android-tools xorg-server-xvfb
 
+# for Debian
+apt install adb xvfb
+```
 for client side, you only need a web browser.
 
 Additionally, a [modified scrcpy-server](https://github.com/huonwe/scrcpy-0x63) is used.
