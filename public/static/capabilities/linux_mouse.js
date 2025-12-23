@@ -3,21 +3,21 @@
 const TYPE_MOUSE = 0x01;
 const MOUSE_ACTION_MOVE = 0;
 const MOUSE_ACTION_DOWN = 1;
-const MOUSE_ACTION_UP   = 2;
+const MOUSE_ACTION_UP = 2;
 
 // var mouse_x = 0;
 // var mouse_y = 0;
-let virtualMouse = { 
-    x: 0, 
-    y: 0, 
-    wheelY: 0 
+let virtualMouse = {
+    x: 0,
+    y: 0,
+    wheelY: 0
 };
 /**
  * Remote Control Mouse Handler
  */
 
 // 配置项
-const MOUSE_SENSITIVITY = 1.0; 
+const MOUSE_SENSITIVITY = 1.0;
 
 // 状态变量
 let isPointerLocked = false;
@@ -27,6 +27,7 @@ let pendingMovement = { x: 0, y: 0, wheelY: 0 };
 
 // 获取视频元素
 const videoElementMouse = document.getElementById('remoteVideo');
+
 
 function initRemoteControl() {
     if (!videoElementMouse) {
@@ -56,7 +57,7 @@ function initRemoteControl() {
     document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('wheel', handleWheel, { passive: false });
-    
+
     // 4. 阻止右键菜单
     document.addEventListener('contextmenu', (e) => {
         if (isPointerLocked) {
@@ -70,8 +71,8 @@ function initRemoteControl() {
 
 function requestPointerLock() {
     const requestMethod = videoElementMouse.requestPointerLock ||
-                          videoElementMouse.mozRequestPointerLock ||
-                          videoElementMouse.webkitRequestPointerLock;
+        videoElementMouse.mozRequestPointerLock ||
+        videoElementMouse.webkitRequestPointerLock;
     if (requestMethod) {
         requestMethod.call(videoElementMouse);
     }
@@ -79,8 +80,8 @@ function requestPointerLock() {
 
 function handlePointerLockChange() {
     const lockedElement = document.pointerLockElement ||
-                          document.mozPointerLockElement ||
-                          document.webkitPointerLockElement;
+        document.mozPointerLockElement ||
+        document.webkitPointerLockElement;
 
     if (lockedElement === videoElementMouse) {
         isPointerLocked = true;
@@ -96,7 +97,7 @@ function resetMouseState() {
     mouseButtonsMask = 0;
     pendingMovement = { x: 0, y: 0, wheelY: 0 };
     // 发送 Move 事件归零
-    sendControlPacket(MOUSE_ACTION_MOVE, 0, 0, 0, 0); 
+    sendControlPacket(MOUSE_ACTION_MOVE, 0, 0, 0, 0);
 }
 
 function handleMouseMove(e) {
@@ -115,14 +116,14 @@ function handleMouseDown(e) {
     if (!isPointerLocked) return;
     e.preventDefault(); e.stopPropagation();
 
-    switch(e.button) {
+    switch (e.button) {
         case 0: mouseButtonsMask |= 1; break; // Left
         case 2: mouseButtonsMask |= 2; break; // Right (Go端需映射为3)
         case 1: mouseButtonsMask |= 4; break; // Middle
     }
 
     // 点击立即发送，不走 RAF 延迟
-    flushPendingEvents(MOUSE_ACTION_DOWN); 
+    flushPendingEvents(MOUSE_ACTION_DOWN);
 }
 
 /**
@@ -134,7 +135,7 @@ function handleMouseUp(e) {
 
     // 1. 先计算出当前正在被抬起的按键掩码
     let releasingMask = 0;
-    switch(e.button) {
+    switch (e.button) {
         case 0: releasingMask = 1; break; // Left
         case 2: releasingMask = 2; break; // Right
         case 1: releasingMask = 4; break; // Middle
@@ -154,8 +155,8 @@ function handleWheel(e) {
     e.preventDefault();
 
     // 归一化滚轮
-    const delta = -Math.sign(e.deltaY); 
-    
+    const delta = -Math.sign(e.deltaY);
+
     pendingMovement.wheelY += delta;
     scheduleSend(MOUSE_ACTION_MOVE); // 滚轮视为带 Wheel 数据的 Move
 }
@@ -181,9 +182,9 @@ function scheduleSend(actionType) {
  */
 function flushPendingEvents(actionType, buttonsOverride) {
     // 只有当没有任何数据变化时才跳过
-    if (actionType === MOUSE_ACTION_MOVE && 
-        pendingMovement.x === 0 && 
-        pendingMovement.y === 0 && 
+    if (actionType === MOUSE_ACTION_MOVE &&
+        pendingMovement.x === 0 &&
+        pendingMovement.y === 0 &&
         pendingMovement.wheelY === 0) {
         return;
     }
@@ -191,7 +192,7 @@ function flushPendingEvents(actionType, buttonsOverride) {
     const dx = Math.round(pendingMovement.x * MOUSE_SENSITIVITY);
     const dy = Math.round(pendingMovement.y * MOUSE_SENSITIVITY);
     const wheel = pendingMovement.wheelY;
-    
+
     // 【关键】如果有传入 override (比如 MouseUp 时)，就用传入的，否则用全局状态
     // 注意检查 undefined，因为 0 也是有效值
     const buttons = (buttonsOverride !== undefined) ? buttonsOverride : mouseButtonsMask;
@@ -211,9 +212,14 @@ function sendControlPacket(action, dx, dy, buttons, wheel) {
     if (!window.ws || window.ws.readyState !== WebSocket.OPEN) return;
 
     // 调试日志：查看发送的具体动作和坐标
-    
+
     virtualMouse.x += dx;
     virtualMouse.y += dy;
+    virtualMouse.x = Math.min(virtualMouse.x, videoElementMouse.videoWidth ? videoElementMouse.videoWidth : virtualMouse.x);
+    virtualMouse.y = Math.min(virtualMouse.y, videoElementMouse.videoHeight ? videoElementMouse.videoHeight : virtualMouse.y);
+    virtualMouse.x = Math.max(virtualMouse.x, 0);
+    virtualMouse.y = Math.max(virtualMouse.y, 0);
+
     // console.log(`Send: Act=${action}, x=${virtualMouse.x}, y=${virtualMouse.y}, Btn=${buttons}`);
     const packet = createMousePacket(action, virtualMouse.x, virtualMouse.y, buttons, 0, wheel);
     window.ws.send(packet);
