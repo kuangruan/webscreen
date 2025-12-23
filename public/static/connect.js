@@ -12,6 +12,14 @@ var CONFIG = (function () {
             device_port: "0",
             av_sync: false,
             driver_config: {
+                ip : "",
+                user: "",
+                password: "",
+                resolution: "1920x1080",
+                frameRate: "60",
+                bitRate: "20000000",
+                codec: "h264",
+                
                 max_fps: "60",
                 video_codec: "h264",
                 audio_codec: "opus",

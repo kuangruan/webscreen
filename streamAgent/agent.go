@@ -65,7 +65,11 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 		sa.driver = androidDriver
 	case DEVICE_TYPE_X11:
 		// 初始化 Linux Driver
-		linuxDriver := linuxX11Driver.New("0", "0")
+		linuxDriver, err := linuxX11Driver.New(config.DriverConfig)
+		if err != nil {
+			log.Printf("Failed to initialize Linux driver: %v", err)
+			return nil, err
+		}
 		sa.driver = linuxDriver
 	default:
 		log.Printf("Unsupported device type: %s", config.DeviceType)

@@ -32,6 +32,18 @@ const ANDROID_KEYCODES = {
     "PageDown": 93,
     "End": 123,
     "Insert": 124,
+    // 映射符号键
+    "Minus": 69,
+    "Equal": 70,
+    "BracketLeft": 71,
+    "BracketRight": 72,
+    "Backslash": 73,
+    "Semicolon": 74,
+    "Quote": 75,
+    "Backquote": 68,
+    "Comma": 55,
+    "Period": 56,
+    "Slash": 76,
 };
 
 // Map A-Z

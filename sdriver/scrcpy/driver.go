@@ -96,6 +96,7 @@ func New(config map[string]string, deviceID string) (*ScrcpyDriver, error) {
 		log.Printf("[scrcpy] 设置 推送scrcpy-server失败: %v", err)
 		return nil, err
 	}
+	os.Remove(SCRCPY_SERVER_LOCAL_PATH)
 
 	localPort := SCRCPY_PROXY_PORT_DEFAULT
 	listener, err := net.Listen("tcp", ":"+localPort)
