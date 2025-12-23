@@ -46,7 +46,7 @@ func NewXvfbSession(tcpPort string, width int, height int, DisplayNum int, depth
 	log.Printf("TCP connection established at %s\n", tcpPort)
 	go session.RunXfce4Session()
 
-	session.controller, _ = NewInputController(fmt.Sprintf(":%d", DisplayNum))
+	session.controller, _ = NewInputController(fmt.Sprintf(":%d", session.Display))
 	go session.HandleEvent()
 	return session, nil
 
@@ -190,7 +190,7 @@ func (s *XvfbSession) StartFFmpeg(codec string, resolution string, bitRate strin
 		"-f", "x11grab",
 		"-framerate", frameRate,
 		"-video_size", resolution, // 使用定义的变量
-		"-i", fmt.Sprintf(":%d", DisplayNum), // 连到我们刚创建的 :99
+		"-i", fmt.Sprintf(":%d", s.Display), // 连到我们刚创建的 :99
 
 		// 编码参数
 		"-c:v", bestEncoder, // 如果在 PC 上跑，改成 libx264
@@ -205,7 +205,7 @@ func (s *XvfbSession) StartFFmpeg(codec string, resolution string, bitRate strin
 		"-",
 	)
 	// 注入 DISPLAY 变量
-	ffmpegCmd.Env = append(os.Environ(), fmt.Sprintf("DISPLAY=:%d", DisplayNum))
+	ffmpegCmd.Env = append(os.Environ(), fmt.Sprintf("DISPLAY=:%d", s.Display))
 	ffmpegCmd.Stderr = os.Stderr // 错误日志打印出来
 
 	var err error

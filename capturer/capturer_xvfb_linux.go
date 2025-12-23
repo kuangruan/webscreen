@@ -13,12 +13,12 @@ import (
 	"time"
 )
 
-// 配置参数
-const (
-	DisplayNum = 99
-	// Resolution = "1920x1080"
-	BitDepth = 24 // 24位色深
-)
+// // 配置参数
+// const (
+// 	DisplayNum = 99
+// 	// Resolution = "1920x1080"
+// 	BitDepth = 24 // 24位色深
+// )
 
 func main() {
 	tcpPort := flag.String("tcp_port", "27184", "server listen port")
@@ -34,7 +34,7 @@ func main() {
 	// 定义清理函数：用于杀死 Xvfb 进程
 	width, err := strconv.Atoi(_width)
 	height, err := strconv.Atoi(_height)
-	session, err := NewXvfbSession(*tcpPort, width, height, DisplayNum, BitDepth)
+	session, err := NewXvfbSession(*tcpPort, width, height, 99, 24)
 	if err != nil {
 		log.Printf("无法启动 Xvfb: %v", err)
 		return
