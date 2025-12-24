@@ -61,9 +61,14 @@ func New(cfg map[string]string) (*LinuxDriver, error) {
 	}
 	if d.ip == "127.0.0.1" || d.ip == "localhost" || d.ip == "" {
 		d.ip = "127.0.0.1"
-		LocalStartXvfb("27184", d.resolution, d.bitRate, d.frameRate, d.codec)
+		err = LocalStartXvfb("27184", d.resolution, d.bitRate, d.frameRate, d.codec)
 	} else {
-		PushAndStartXvfb(d.user, d.ip, "27184", d.resolution, d.bitRate, d.frameRate, d.codec)
+		err = PushAndStartXvfb(d.user, d.ip, "27184", d.resolution, d.bitRate, d.frameRate, d.codec)
+	}
+	if err != nil {
+		log.Printf("[xvfb] 启动远程 capturer_xvfb 失败: %v", err)
+		os.Remove("capturer_xvfb")
+		return nil, err
 	}
 
 	var conn net.Conn
@@ -202,4 +207,5 @@ func (d *LinuxDriver) Stop() {
 	if d.conn != nil {
 		d.conn.Close()
 	}
+	os.Remove("capturer_xvfb")
 }

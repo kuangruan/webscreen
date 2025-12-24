@@ -53,8 +53,7 @@ func GetBestH264Encoder() string {
 
 // GetBestHEVCEncoder 自动检测最佳 H.265 (HEVC) 编码器
 func GetBestHEVCEncoder() string {
-	// 1. Rockchip 瑞芯微 (你的板子核心)
-	// 极高优先级，这是你的硬件强项
+	// 1. Rockchip 瑞芯微
 	if hasEncoder("hevc_rkmpp") {
 		return "hevc_rkmpp"
 	}
@@ -89,7 +88,7 @@ func GetBestHEVCEncoder() string {
 		return "hevc_vaapi"
 	}
 
-	// 8. 软件编码 (极度消耗 CPU，慎用！)
+	// 8. 软件编码
 	// 除非是强劲的 PC CPU，否则在 ARM 上跑 libx265 可能会只有 1-5 FPS
 	return "libx265"
 }
