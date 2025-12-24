@@ -56,8 +56,9 @@ func New(cfg map[string]string) (*LinuxDriver, error) {
 	}
 	err = os.WriteFile("capturer_xvfb", data, 0755)
 	if err != nil {
-		log.Printf("[xvfb] 写入本地文件失败, 但会继续: %v", err)
-		// return nil, err
+		log.Printf("[xvfb] 写入本地文件失败: %v", err)
+		os.Remove("capturer_xvfb")
+		return nil, err
 	}
 	if d.ip == "127.0.0.1" || d.ip == "localhost" || d.ip == "" {
 		d.ip = "127.0.0.1"
@@ -80,6 +81,7 @@ func New(cfg map[string]string) (*LinuxDriver, error) {
 		}
 		time.Sleep(time.Second)
 		if time.Since(startTime) > 5*time.Second {
+			os.Remove("capturer_xvfb")
 			return nil, fmt.Errorf("Failed to connect to capturer after 5 seconds: %v", err)
 		}
 	}
