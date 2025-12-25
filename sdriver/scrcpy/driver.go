@@ -42,6 +42,8 @@ type ScrcpyDriver struct {
 	audioConn   net.Conn
 	controlConn net.Conn
 
+	options map[string]string
+
 	capabilities sdriver.DriverCaps
 
 	ctx       context.Context
@@ -121,15 +123,20 @@ func New(config map[string]string, deviceID string) (*ScrcpyDriver, error) {
 		"scid":           da.scid,
 		"max_size":       config["max_size"],
 		"max_fps":        config["max_fps"],
+		"video":          "true",
 		"video_bit_rate": config["video_bit_rate"],
 		"video_codec":    config["video_codec"],
+		"audio":          config["audio"],
+		"control":        "true",
 		"new_display":    config["new_display"],
 		"cleanup":        "true",
 		"log_level":      "info",
 	}
+
 	da.adbClient.StartScrcpyServer(options)
+	da.options = options
 	// log.Println("Scrcpy server started successfully")
-	conns := make([]net.Conn, 3)
+	// conns := make([]net.Conn, 3)
 	log.Println("start tcp listening")
 
 	// 设置一个总的超时时间，如果在这个时间内没有建立所有连接，就认为失败
@@ -137,7 +144,7 @@ func New(config map[string]string, deviceID string) (*ScrcpyDriver, error) {
 	timeout := time.Second * 5
 	listener.(*net.TCPListener).SetDeadline(time.Now().Add(timeout))
 
-	for i := 0; i < 3; i++ {
+	if options["video"] == "true" {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("[scrcpy] Accept 失败 (可能是 scrcpy-server 启动失败): %v", err)
@@ -145,39 +152,53 @@ func New(config map[string]string, deviceID string) (*ScrcpyDriver, error) {
 			da.adbClient.ReverseRemove(fmt.Sprintf("localabstract:scrcpy_%s", da.scid))
 			return nil, fmt.Errorf("failed to accept connection from scrcpy-server: %v", err)
 		}
-		log.Println("Accept Connection", i)
-		conns[i] = conn
+		err = da.readDeviceMeta(conn)
+		if err != nil {
+			log.Println("Failed to read device metadata:", err)
+			return nil, err
+		}
+		log.Printf("[scrcpy] Connected Device: %s", da.deviceName)
+
+		da.assignConn(conn)
 	}
+	if options["audio"] == "true" {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("[scrcpy] Accept 失败 (可能是 scrcpy-server 启动失败): %v", err)
+			listener.Close()
+			da.adbClient.ReverseRemove(fmt.Sprintf("localabstract:scrcpy_%s", da.scid))
+			return nil, fmt.Errorf("failed to accept connection from scrcpy-server: %v", err)
+		}
+		da.assignConn(conn)
+	}
+	if options["control"] == "true" {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("[scrcpy] Accept 失败 (可能是 scrcpy-server 启动失败): %v", err)
+			listener.Close()
+			da.adbClient.ReverseRemove(fmt.Sprintf("localabstract:scrcpy_%s", da.scid))
+			return nil, fmt.Errorf("failed to accept connection from scrcpy-server: %v", err)
+		}
+		da.controlConn = conn
+		da.capabilities.CanControl = true
+		da.capabilities.CanUHID = true
+		da.capabilities.CanClipboard = true
+		log.Println("Scrcpy Control Connection Established")
+	}
+
 	listener.Close()
 
-	for i, conn := range conns {
-		// The target environment is ARM devices, read directly without buffering could be faster because of less memory copy
-		// conn := comm.NewBufferedReadWriteCloser(_conn, 4096)
-		switch i {
-		case 0:
-			// Device Metadata and Video
-			err = da.readDeviceMeta(conn)
-			if err != nil {
-				log.Println("Failed to read device metadata:", err)
-				return nil, err
-			}
-			log.Printf("[scrcpy] Connected Device: %s", da.deviceName)
-
-			da.assignConn(conn)
-		case 1:
-			da.assignConn(conn)
-		case 2:
-			// The third connection is always Control
-			da.controlConn = conn
-			da.capabilities.CanControl = true
-			da.capabilities.CanUHID = true
-			da.capabilities.CanClipboard = true
-			log.Println("Scrcpy Control Connection Established")
-		}
-	}
 	// 甜点值
-	da.videoConn.(*net.TCPConn).SetReadBuffer(2 * 1024 * 1024)
-	da.audioConn.(*net.TCPConn).SetReadBuffer(64 * 1024)
+	if da.videoConn != nil {
+		da.videoConn.(*net.TCPConn).SetReadBuffer(4 * 1024 * 1024)
+	}
+	if da.audioConn != nil {
+		da.audioConn.(*net.TCPConn).SetReadBuffer(64 * 1024)
+	}
+
+	// 设更合理的读缓冲区大小
+	// da.videoConn.(*net.TCPConn).SetReadBuffer(2 * 1024 * 1024)
+	// da.audioConn.(*net.TCPConn).SetReadBuffer(64 * 1024)
 
 	return da, nil
 }

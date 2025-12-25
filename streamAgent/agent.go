@@ -29,7 +29,7 @@ type Agent struct {
 	// chan
 	videoCh   <-chan sdriver.AVBox
 	audioCh   <-chan sdriver.AVBox
-	controlCh <-chan sdriver.Event
+	controlCh chan sdriver.Event
 
 	// 用于音视频推流的 PTS 记录
 	lastVideoPTS time.Duration

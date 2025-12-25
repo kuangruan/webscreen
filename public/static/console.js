@@ -16,6 +16,7 @@ const defaultStreamConfig = {
         audio_codec: 'opus',
         video_bit_rate: 8000000,
         video_codec_options: '',
+        audio_disable: 'false',
         new_display: ''
     }
 };
@@ -321,6 +322,7 @@ function startStream(serial) {
                 max_fps: String(drv.max_fps || '60'),
                 video_codec: drv.video_codec || "h264",
                 audio_codec: drv.audio_codec || "opus",
+                audio: drv.audio || "true",
                 video_bit_rate: String(drv.video_bit_rate || 8000000)
             }
         };
@@ -398,6 +400,7 @@ function showConfigModal(serial) {
         document.getElementById('configVideoBitrate').value = formatBitrate(drv.video_bit_rate).replace(/[KMG]$/, '') || '';
         document.getElementById('configVideoCodec').value = drv.video_codec || 'h264';
         document.getElementById('configVideoCodecOptions').value = drv.video_codec_options || '';
+        document.getElementById('configAudio').checked = drv.audio === 'true';
         document.getElementById('configNewDisplay').value = drv.new_display || '';
     }
 
@@ -435,6 +438,7 @@ function saveDeviceConfig() {
         drv.video_codec = document.getElementById('configVideoCodec').value;
         drv.video_codec_options = document.getElementById('configVideoCodecOptions').value.trim();
         drv.new_display = document.getElementById('configNewDisplay').value.trim();
+        drv.audio = document.getElementById('configAudio').checked ? 'true' : 'false';
         drv.audio_codec = 'opus'; // Hardcoded default for now
     }
 

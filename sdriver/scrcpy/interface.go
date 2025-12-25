@@ -1,21 +1,26 @@
 package scrcpy
 
 import (
-	"fmt"
 	"log"
 	"time"
 	"webscreen/sdriver"
 )
 
-func (sd *ScrcpyDriver) GetReceivers() (<-chan sdriver.AVBox, <-chan sdriver.AVBox, <-chan sdriver.Event) {
+func (sd *ScrcpyDriver) GetReceivers() (<-chan sdriver.AVBox, <-chan sdriver.AVBox, chan sdriver.Event) {
 	return sd.VideoChan, sd.AudioChan, sd.ControlChan
 }
 
 func (sd *ScrcpyDriver) Start() {
 	log.Println("ScrcpyDriver: Start called")
-	go sd.convertVideoFrame()
-	go sd.convertAudioFrame()
-	go sd.transferControlMsg()
+	if sd.videoConn != nil {
+		go sd.convertVideoFrame()
+	}
+	if sd.audioConn != nil {
+		go sd.convertAudioFrame()
+	}
+	if sd.controlConn != nil {
+		go sd.transferControlMsg()
+	}
 }
 
 func (sd *ScrcpyDriver) Pause() {
@@ -97,7 +102,7 @@ func (sd *ScrcpyDriver) Stop() {
 	if sd.controlConn != nil {
 		sd.controlConn.Close()
 	}
-	sd.adbClient.ReverseRemove(fmt.Sprintf("localabstract:scrcpy_%s", sd.scid))
+	// sd.adbClient.ReverseRemove(fmt.Sprintf("localabstract:scrcpy_%s", sd.scid))
 	sd.adbClient.Stop()
 	sd.cancel()
 }

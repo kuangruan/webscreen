@@ -5,7 +5,7 @@ import (
 	"webscreen/sdriver"
 )
 
-func (sa *Agent) EventFeedback(yield func([]byte) bool) {
+func (sa *Agent) EventFeedback(handler func([]byte) bool) {
 	for event := range sa.controlCh {
 		// log.Printf("[Agent] Received event: %+v", event)
 		eType := event.Type()
@@ -16,7 +16,16 @@ func (sa *Agent) EventFeedback(yield func([]byte) bool) {
 			msg := make([]byte, 1+len(content))
 			copy(msg[1:], content)
 			msg[0] = byte(sdriver.EVENT_TYPE_RECEIVE_CLIPBOARD)
-			if !yield(msg) {
+			if !handler(msg) {
+				return
+			}
+		case sdriver.EVENT_TYPE_TEXT_MSG:
+			event := event.(sdriver.TextMsgEvent)
+			content := []byte(event.Msg)
+			msg := make([]byte, 1+len(content))
+			copy(msg[1:], content)
+			msg[0] = byte(sdriver.EVENT_TYPE_TEXT_MSG)
+			if !handler(msg) {
 				return
 			}
 		default:

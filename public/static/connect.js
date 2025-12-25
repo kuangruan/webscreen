@@ -31,6 +31,7 @@ var CONFIG = (function () {
                 video_codec: "h264",
                 audio_codec: "opus",
                 video_bit_rate: "8000000",
+                audio: "true",
 
                 // new_display: "1920x1080/60",
             }
@@ -45,6 +46,7 @@ var CONFIG = (function () {
         device_port: "0",
         driver_config: {
             video_codec: "h264",
+            audio: "true",
             audio_codec: "opus",
             video_bit_rate: "8000000"
         }
@@ -149,9 +151,9 @@ async function start() {
             }
         } else {
             const view = new Uint8Array(event.data);
+            const decoder = new TextDecoder();
             switch (view[0]) {
                 case 0x17: // TYPE_CLIPBOARD_DATA
-                    const decoder = new TextDecoder();
                     const text = decoder.decode(view.slice(1));
                     console.log("Clipboard from device:", text);
                     // Copy to browser clipboard
@@ -163,6 +165,11 @@ async function start() {
                         console.error('Clipboard API not available:', e);
                         console.log("HTTPS is required for clipboard access.");
                     }
+                    break;
+                case 0x64: // TYPE_TEXT_MSG
+                    const textMsg = decoder.decode(view.slice(1));
+                    console.log("Text message from agent:", textMsg);
+                    showToast(textMsg, 3000);
                     break;
                 default:
                     console.warn("Unknown binary message type:", view[0]);

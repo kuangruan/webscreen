@@ -34,6 +34,8 @@ const (
 	EVENT_TYPE_UHID_DESTROY EventType = 0x0E
 
 	EVENT_TYPE_REQ_IDR EventType = 0x63
+	// -> Web Toast Message
+	EVENT_TYPE_TEXT_MSG EventType = 0x64
 )
 
 // 鼠标动作枚举
@@ -179,4 +181,12 @@ func (e ReceiveClipboardEvent) Type() EventType {
 
 func (e ReceiveClipboardEvent) GetContent() []byte {
 	return e.Content
+}
+
+type TextMsgEvent struct {
+	Msg string
+}
+
+func (e TextMsgEvent) Type() EventType {
+	return EVENT_TYPE_TEXT_MSG
 }
