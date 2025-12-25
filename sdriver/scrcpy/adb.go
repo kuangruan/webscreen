@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -26,11 +28,6 @@ func NewADBClient(deviceSerial string, scid string, parentCtx context.Context) *
 func (c *ADBClient) Stop() {
 	c.ReverseRemove(fmt.Sprintf("localabstract:scrcpy_%s", c.scid))
 	c.cancel() // 这会触发所有绑定了该 ctx 的命令被 Kill
-}
-
-// Shell
-func (c *ADBClient) Shell(cmd string) error {
-	return c.adb("shell", cmd)
 }
 
 // Push 将本地文件推送到设备上
@@ -56,29 +53,26 @@ func (c *ADBClient) Reverse(local, remote string) error {
 }
 
 func (c *ADBClient) ReverseRemove(local string) error {
-	err := c.adb("reverse", "--remove", local)
-	if err != nil {
-		return fmt.Errorf("ADB Reverse Remove failed: %v", err)
-	}
+	c.adb("reverse", "--remove", local)
+	// if err != nil {
+	// 	return fmt.Errorf("ADB Reverse Remove failed: %v", err)
+	// }
 	return nil
 }
 
 func (c *ADBClient) StartScrcpyServer(options map[string]string) error {
 	cmdStr := toScrcpyCommand(options)
 
-	errChan := make(chan error, 1)
 	go func() {
 		time.Sleep(time.Second * 2) // 给一点时间让 reverse tunnel 生效
 		log.Printf("Starting scrcpy server with command: %s", cmdStr)
-		err := c.Shell(cmdStr)
+		err := c.adb("shell", cmdStr)
 		if err != nil {
-			log.Printf("Scrcpy server exited with error: %v", err)
-			errChan <- err
+			log.Printf("Failed to run adb shell command: %v", err)
+			return
 		} else {
 			log.Println("Scrcpy server exited normally")
-			errChan <- nil
 		}
-		close(errChan)
 	}()
 
 	// 这里我们无法立即知道是否成功，因为 Shell 命令会阻塞
@@ -90,8 +84,46 @@ func (c *ADBClient) adb(args ...string) error {
 	// 如果没有指定设备地址，则使用默认 adb 命令
 	log.Printf("Executing on device %s: %s", c.deviceSerial, args)
 	if c.deviceSerial == "" {
-		return ExecADB(args...)
+		return ExecADB(c.ctx, args...)
 	}
 	// 否则，添加 -s 参数指定设备
-	return ExecADB(append([]string{"-s", c.deviceSerial}, args...)...)
+	return ExecADB(c.ctx, append([]string{"-s", c.deviceSerial}, args...)...)
+}
+
+func (c *ADBClient) SupportOpusAudio(version, scid string) bool {
+	// 1. 确定 scrcpy-server 的远程路径
+	// 如果尚未设置 remotePath，则使用默认值
+	serverPath := c.remotePath
+	if serverPath == "" {
+		serverPath = "/data/local/tmp/scrcpy-server"
+	}
+
+	// 2. 构造 shell 命令
+	cmdStr := fmt.Sprintf("CLASSPATH=%s app_process / com.genymobile.scrcpy.Server %s scid=%s list_encoders=true", serverPath, version, scid)
+
+	// 3. 准备 adb 参数
+	var args []string
+	if c.deviceSerial != "" {
+		args = append(args, "-s", c.deviceSerial)
+	}
+	args = append(args, "shell", cmdStr)
+
+	// 4. 执行命令并捕获输出
+	// 使用 c.ctx 以便在父 Context 取消时能够中止命令
+	cmd := exec.CommandContext(c.ctx, "adb", args...)
+
+	output, err := cmd.CombinedOutput() // 同时获取 stdout 和 stderr
+	if err != nil {
+		// 命令执行失败（可能是 adb 没连接，或者 app_process 报错）
+		log.Printf("Failed to check audio encoders: %v", err)
+		return false
+	}
+
+	// 5. 检查输出中是否包含 "opus"
+	outputStr := string(output)
+
+	// 调试日志：可选，查看设备实际返回了什么
+	log.Printf("Encoder list output: %s", outputStr)
+
+	return strings.Contains(outputStr, "opus")
 }

@@ -1,6 +1,7 @@
 package scrcpy
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -11,15 +12,16 @@ import (
 	"webscreen/utils"
 )
 
-func ExecADB(args ...string) error {
+func ExecADB(ctx context.Context, args ...string) error {
 	adbPath, err := utils.GetADBPath()
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(adbPath, args...)
+	cmd := exec.CommandContext(ctx, adbPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	err = cmd.Run()
+	return err
 }
 
 func GenerateSCID() string {

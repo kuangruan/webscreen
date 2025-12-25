@@ -3,6 +3,7 @@ package sagent
 import (
 	"log"
 	"time"
+	"webscreen/sdriver"
 
 	"github.com/pion/webrtc/v4/pkg/media"
 )
@@ -10,7 +11,7 @@ import (
 func (sa *Agent) StreamingVideo() {
 	if sa.videoCh == nil {
 		log.Println("[Agent] Video channel is nil, skipping video streaming")
-		// sa.controlCh <- sdriver.TextMsgEvent{Msg: "Video channel is nil, cannot stream video."}
+		sa.controlCh <- sdriver.TextMsgEvent{Msg: "Video channel is nil, cannot stream video."}
 		return
 	}
 	sa.lastVideoPTS = 0
@@ -65,7 +66,7 @@ func (sa *Agent) StreamingVideo() {
 func (sa *Agent) StreamingAudio() {
 	if sa.audioCh == nil {
 		log.Println("[Agent] Audio channel is nil, skipping audio streaming")
-		// sa.controlCh <- sdriver.TextMsgEvent{Msg: "Audio channel is nil, cannot stream audio."}
+		sa.controlCh <- sdriver.TextMsgEvent{Msg: "Audio channel is nil, cannot stream audio."}
 		return
 	}
 	log.Println("[Agent] Audio streaming started")

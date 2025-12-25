@@ -152,6 +152,7 @@ async function start() {
         } else {
             const view = new Uint8Array(event.data);
             const decoder = new TextDecoder();
+            // console.log("Received binary message, type:", view[0]);
             switch (view[0]) {
                 case 0x17: // TYPE_CLIPBOARD_DATA
                     const text = decoder.decode(view.slice(1));
