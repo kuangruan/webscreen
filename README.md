@@ -100,3 +100,5 @@ Please notice that the ports in `pair` and `connect` are different. [See details
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+NOTE: The project was relicensed to AGPLv3 since v1.1.0
