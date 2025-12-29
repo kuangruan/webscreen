@@ -63,6 +63,7 @@ func (sd *ScrcpyDriver) RequestIDR(firstFrame bool) {
 	}
 
 	if firstFrame {
+		log.Println("First frame IDR request, sending cached key frame")
 		sd.sendCachedKeyFrame()
 		sd.KeyFrameRequest()
 		return

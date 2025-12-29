@@ -13,10 +13,10 @@ const defaultStreamConfig = {
     driver_config: {
         max_fps: '60',
         video_codec: 'h264',
+        audio: 'true',
         audio_codec: 'opus',
         video_bit_rate: 8000000,
         video_codec_options: '',
-        audio_disable: 'false',
         new_display: ''
     }
 };
@@ -150,6 +150,11 @@ function renderDeviceList() {
             if (drv.max_fps) tagsHtml += `<span class="px-2 py-0.5 rounded-md bg-[#333] text-xs text-gray-300 font-mono">${drv.max_fps}FPS</span>`;
             if (drv.video_bit_rate) tagsHtml += `<span class="px-2 py-0.5 rounded-md bg-[#333] text-xs text-gray-300 font-mono">${formatBitrate(drv.video_bit_rate)}</span>`;
             if (drv.video_codec) tagsHtml += `<span class="px-2 py-0.5 rounded-md bg-[#333] text-xs text-gray-300 font-mono uppercase">${drv.video_codec}</span>`;
+            if (drv.audio === 'true') {
+                tagsHtml += `<span class="px-2 py-0.5 rounded-md bg-[#333] text-xs text-gray-300 font-mono">Audio</span>`;
+            } else {
+                tagsHtml += `<span class="px-2 py-0.5 rounded-md bg-[#333] text-xs text-gray-300 font-mono line-through">Audio</span>`;
+            }
         }
 
         const card = document.createElement('div');
