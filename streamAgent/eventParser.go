@@ -134,12 +134,13 @@ func (a *Agent) parseUHIDCreateEvent(raw []byte) (*sdriver.UHIDCreateEvent, erro
 		return nil, fmt.Errorf("body missing: expected %d, got %d", totalExpected, len(raw))
 	}
 
+	name := append([]byte{0x77, 0x65, 0x62, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x20}, raw[8:8+nameSize]...)
 	e := &sdriver.UHIDCreateEvent{
 		ID:             binary.BigEndian.Uint16(raw[1:3]),
 		VendorID:       binary.BigEndian.Uint16(raw[3:5]),
 		ProductID:      binary.BigEndian.Uint16(raw[5:7]),
-		NameSize:       uint8(nameSize),
-		Name:           raw[8 : 8+nameSize],
+		NameSize:       uint8(len(name)),
+		Name:           name,
 		ReportDescSize: reportDescSize,
 		ReportDesc:     raw[descSizeOffset+2 : descSizeOffset+2+int(reportDescSize)],
 	}

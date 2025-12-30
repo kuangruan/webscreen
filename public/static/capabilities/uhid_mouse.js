@@ -17,7 +17,7 @@ let mouseRafScheduled = false;
 // 自定义 UHID 设备 ID，避免与系统默认设备冲突
 // 范围 0-65535，选择一个不太可能被占用的值
 const UHID_DEVICE_ID = 2;
-const UHID_DEVICE_NAME = "";
+const UHID_DEVICE_NAME = "Virtual Mouse";
 
 function initUHIDMouse() {
     if (uhidMouseInitialized) {
@@ -292,7 +292,7 @@ function createUHIDCreatePacket(deviceID = UHID_DEVICE_ID) {
     // 1. 编码名字
     const encoder = new TextEncoder();
     // 如果名字太长，截断到 255 字节 (因为长度只有 1 字节)
-    const rawName = UHID_DEVICE_NAME || "Scrcpy Mouse";
+    const rawName = UHID_DEVICE_NAME;
     const nameBytes = encoder.encode(rawName).slice(0, 255); 
     const descriptor = MOUSE_REPORT_DESCRIPTOR;
 

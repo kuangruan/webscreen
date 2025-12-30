@@ -4,7 +4,7 @@ const UHID_KEYBOARD_MSG_INPUT = 13;
 const UHID_KEYBOARD_MSG_DESTROY = 14;
 
 const UHID_KEYBOARD_ID = 1;
-const UHID_KEYBOARD_NAME = "Scrcpy Keyboard";
+const UHID_KEYBOARD_NAME = "Virtual Keyboard";
 
 var uhidKeyboardEnabled = false;
 let uhidKeyboardInitialized = false;
