@@ -127,8 +127,10 @@ async function start() {
                         case 'webrtc_init':
                             const answerSdp = message.sdp;
                             const capabilities = message.capabilities;
+                            const media_meta = message.media_meta;
                             console.log("Received SDP Answer", answerSdp);
                             console.log("Driver Capabilities:", capabilities);
+                            console.log("Media Meta:", media_meta);
 
                             // Update UI based on capabilities
                             await updateUIBasedOnCapabilities(capabilities);
@@ -148,6 +150,17 @@ async function start() {
                                 }
                             });
                             setInterval(() => force_sync(pc), 1000);
+                            setTimeout(()=> {
+                                let rect = remoteVideo.getBoundingClientRect();
+                                // console.log("Initial video size:", rect.width, "x", rect.height);
+                                // updateVideoCache();
+                                console.log(rect.width/rect.height, media_meta.width/media_meta.height);
+                                if (rect.width/rect.height != media_meta.width/media_meta.height) {
+                                    let p = createRequestKeyFramePacket();
+                                    ws.send(p);
+                                }
+                            }, 2000);
+
                             break;
                         default:
                             break;

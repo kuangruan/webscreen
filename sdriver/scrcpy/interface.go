@@ -48,6 +48,7 @@ func (sd *ScrcpyDriver) SendEvent(event sdriver.Event) error {
 	case *sdriver.UHIDDestroyEvent:
 		sd.SendUHIDDestroyEvent(e)
 	case *sdriver.IDRReqEvent:
+		sd.sendCachedKeyFrame()
 		sd.KeyFrameRequest()
 	default:
 		log.Printf("ScrcpyDriver: Unhandled event type: %T", event)

@@ -71,7 +71,8 @@ func (wm *WebMaster) handleScreenWS(c *gin.Context) {
 	// conn.WriteMessage(websocket.TextMessage, []byte(finalSDP))
 	capabilities := agent.Capabilities()
 	log.Printf("Driver Capabilities: %+v", capabilities)
-	conn.WriteJSON(map[string]interface{}{"status": "ok", "capabilities": capabilities, "sdp": finalSDP, "stage": "webrtc_init"})
+	media_meta := agent.GetMediaMeta()
+	conn.WriteJSON(map[string]interface{}{"status": "ok", "capabilities": capabilities, "media_meta": media_meta, "sdp": finalSDP, "stage": "webrtc_init"})
 	go wm.listenScreenWS(conn, agent, sessionID)
 	go wm.listenEventFeedback(agent, conn)
 
