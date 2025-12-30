@@ -70,7 +70,7 @@ func New(config map[string]string, deviceID string) (*ScrcpyDriver, error) {
 		ControlChan: make(chan sdriver.Event, 10),
 
 		videoBuffer: comm.NewLinearBuffer(0),
-		audioBuffer: comm.NewLinearBuffer(1 * 1024 * 1024), // 1MB 音频缓冲区
+		audioBuffer: comm.NewLinearBuffer(4 * 1024 * 1024), // 4MB 音频缓冲区
 
 		// LastVPS: make([]byte, 32),
 		// LastSPS: make([]byte, 64),
