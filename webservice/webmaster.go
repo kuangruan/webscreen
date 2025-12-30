@@ -57,7 +57,6 @@ func Default(staticFS fs.FS) *WebMaster {
 		staticFS:             staticFS,
 	}
 	wm.jwtSecret = []byte(time.Now().String())
-	wm.setRouter()
 	return wm
 }
 
@@ -76,6 +75,7 @@ func (wm *WebMaster) setRouter() {
 		ctx.Redirect(302, "/console")
 	})
 	if wm.pin != "" {
+		log.Println("Enable PIN middleware")
 		r.Use(wm.HybridAuthMiddleware())
 	}
 	screen := r.Group("/screen")
@@ -112,6 +112,7 @@ func (wm *WebMaster) Serve(port string) {
 	// if wm.config.EnableAndroidDiscover {
 	// 	go wm.AndroidDevicesDiscovery()
 	// }
+	wm.setRouter()
 	wm.router.Run(":" + port)
 }
 
