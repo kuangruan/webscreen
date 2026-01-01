@@ -49,7 +49,7 @@ apt install xvfb ffmpeg xfce4
 # then you can directly use pre-built binary
 ```
 
-for client side, you only need a web browser.
+for client side, you need a web browser that support WebRTC (H.264 High Profile, or H.265 Main Profile).
 
 Additionally, a [modified scrcpy-server](https://github.com/huonwe/scrcpy-0x63) is used.
 
@@ -102,5 +102,3 @@ Please notice that the ports in `pair` and `connect` are different. [See details
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-NOTE: The project was relicensed to AGPLv3 since v1.1.0
